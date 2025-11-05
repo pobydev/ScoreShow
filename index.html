@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/logo.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="교사용 점수 확인 도구 - 학생을 한 명씩 개별적으로 보여주어 비밀을 보호하면서 점수 확인" />
+    <meta name="theme-color" content="#ffffff" />
+    <!-- CSP: 개발/프로덕션 환경에 따라 자동 설정 -->
+    <!-- 개발: connect-src 허용, 프로덕션: connect-src 'none' (오프라인 강제) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' blob: data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    />
+    <title>ScoreShow</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
