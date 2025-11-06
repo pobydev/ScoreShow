@@ -197,9 +197,9 @@ export function PreviewPanel() {
               >
                 <div className="font-semibold text-sm mb-1">{eval_.area}</div>
                 <div className="text-xl font-bold mb-2" style={{ color: 'var(--primary)' }}>
-                  {eval_.score} / {eval_.maxScore}
+                  {eval_.score === null ? '미입력' : `${eval_.score} / ${eval_.maxScore}`}
                 </div>
-                {eval_.maxScore > 0 && (
+                {eval_.maxScore > 0 && eval_.score !== null && (
                   <div>
                     <div className="w-full rounded-full h-1.5 mb-1" style={{ backgroundColor: 'var(--secondary)' }}>
                       <div

@@ -159,23 +159,21 @@ export function normalizeRow(row: ParsedRow): {
 
   // 점수 검증: 점수가 없어도 평가 영역 정보만 있으면 허용
   // (점수가 나중에 입력될 수 있음)
-  if (score === null) {
-    score = 0; // 점수가 없으면 0으로 설정
-  }
+  // score가 null이면 null로 유지 (미입력 상태)
 
   if (maxScore === null) {
-    // 만점 정보가 없으면 점수와 동일하게 설정하거나 기본값
-    maxScore = score > 0 ? score : 100; // 기본값 100
+    // 만점 정보가 없으면 점수와 동일하게 설정하거나 기본값 (score가 null이 아니고 0보다 클 때)
+    maxScore = (score !== null && score > 0) ? score : 100; // 기본값 100
   }
 
-  // 음수 체크
-  if (score < 0 || maxScore < 0) {
+  // 음수 체크 (score가 null이 아닐 때만)
+  if (score !== null && (score < 0 || maxScore < 0)) {
     console.warn(`Invalid score: ${score}/${maxScore} for ${name}`);
     return null;
   }
 
-  // 만점 초과 체크
-  if (score > maxScore) {
+  // 만점 초과 체크 (score가 null이 아닐 때만)
+  if (score !== null && score > maxScore) {
     console.warn(`Score exceeds max: ${score}/${maxScore} for ${name}`);
     // 경고만 표시하고 진행
   }
