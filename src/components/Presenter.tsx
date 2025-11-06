@@ -578,9 +578,9 @@ export function Presenter() {
                       {eval_.area}
                     </div>
                     <div className={`${evaluations.length === 1 ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'} font-bold mb-2`}>
-                      {eval_.score} / {eval_.maxScore}
+                      {eval_.score === null ? '미입력' : `${eval_.score} / ${eval_.maxScore}`}
                     </div>
-                    {eval_.maxScore > 0 && (
+                    {eval_.maxScore > 0 && eval_.score !== null && (
                       <div className={`${evaluations.length === 1 ? 'text-xl' : 'text-lg'}`} style={{ color: 'var(--muted-foreground)' }}>
                         {((eval_.score / eval_.maxScore) * 100).toFixed(1)}%
                       </div>

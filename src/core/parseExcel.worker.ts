@@ -319,11 +319,10 @@ self.onmessage = async function (
 
     // 여러 평가 영역 컬럼 찾기 (표 헤더에서 "쓰기1", "말하기", "듣기" 등)
     // 헤더 행들을 모두 스캔하여 평가 영역 패턴이 있는 모든 컬럼 찾기
-    if (!extractedAreaFromHeader) {
-      // 헤더 행에서 평가 영역 패턴 찾기: "쓰기1", "쓰기2", "말하기", "듣기", "읽기" 등
-      // areaPattern 변수는 사용하지 않으므로 제거
+    // extractedAreaFromHeader가 true여도 여러 영역을 찾기 위해 항상 실행
+    // 헤더 행에서 평가 영역 패턴 찾기: "쓰기1", "쓰기2", "말하기", "듣기", "읽기" 등
 
-      for (let row = 0; row < headerRows.length; row++) {
+    for (let row = 0; row < headerRows.length; row++) {
         const rowData = headerRows[row];
         const rawRowData: string[] = [];
         for (let col = 0; col <= maxCol; col++) {
@@ -435,15 +434,14 @@ self.onmessage = async function (
         }
       }
 
-      // areaColumns 정렬 (컬럼 순서대로)
-      areaColumns.sort((a, b) => a.col - b.col);
+    // areaColumns 정렬 (컬럼 순서대로)
+    areaColumns.sort((a, b) => a.col - b.col);
 
-      if (import.meta.env.DEV) {
-        console.log(
-          `[Parser] Found ${areaColumns.length} evaluation area columns:`,
-          areaColumns.map((a) => `${a.areaName}@${a.col}`)
-        );
-      }
+    if (import.meta.env.DEV) {
+      console.log(
+        `[Parser] Found ${areaColumns.length} evaluation area columns:`,
+        areaColumns.map((a) => `${a.areaName}@${a.col}`)
+      );
     }
 
     // 매핑된 area 컬럼이 있는 경우, 해당 컬럼에서도 확인 (두 번째 이미지 형식)
@@ -1075,96 +1073,63 @@ self.onmessage = async function (
 
         // 모든 영역 컬럼에서 점수 읽기
         for (const areaCol of areaColumns) {
-          // 점수 찾기: 병합된 셀의 경우 병합 범위 내 모든 컬럼 확인
-          let score = 0;
+          // 점수 찾기: 각 영역 컬럼은 독립적으로 처리
+          let score: number | null = null;
 
-          // 먼저 병합 범위 확인
-          const colsToCheck = new Set<number>();
-          colsToCheck.add(areaCol.col); // 기본 컬럼
-
-          // 병합된 셀인지 확인하고 병합 범위 내의 모든 컬럼 추가
-          for (const merge of merges) {
-            const { s, e } = merge;
-            // 헤더 행이 병합 범위에 있고, areaCol.col이 병합 범위 내에 있는지 확인
-            // 일반적으로 헤더는 상단 행(0-15행)에 있으므로, 헤더 행의 병합 정보를 확인
-            for (
-              let headerRow = 0;
-              headerRow < headerRows.length;
-              headerRow++
-            ) {
-              if (
-                headerRow >= s.r &&
-                headerRow <= e.r &&
-                areaCol.col >= s.c &&
-                areaCol.col <= e.c
-              ) {
-                // 병합 범위 내의 모든 컬럼 추가
-                for (let mergeCol = s.c; mergeCol <= e.c; mergeCol++) {
-                  colsToCheck.add(mergeCol);
-                }
-                break;
-              }
-            }
-          }
-
-          // 병합 범위 외에도 인접 컬럼 확인 (혹시 모를 경우)
-          colsToCheck.add(areaCol.col + 1);
-          colsToCheck.add(areaCol.col - 1);
-          if (areaCol.col + 2 < rawRowData.length)
-            colsToCheck.add(areaCol.col + 2);
-
-          // 컬럼들을 순서대로 확인
-          const sortedCols = Array.from(colsToCheck).sort((a, b) => {
-            // areaCol.col을 우선, 그 다음 인접 컬럼, 그 다음 나머지
-            if (a === areaCol.col) return -1;
-            if (b === areaCol.col) return 1;
-            if (Math.abs(a - areaCol.col) < Math.abs(b - areaCol.col))
-              return -1;
-            return a - b;
-          });
-
-          for (const col of sortedCols) {
-            if (col < 0 || col >= rawRowData.length) continue;
-
+          // 해당 영역 컬럼에서만 점수 읽기
+          const col = areaCol.col;
+          
+          if (col >= 0 && col < rawRowData.length) {
             const scoreValue = rawRowData[col] || "";
             const scoreStr = scoreValue.toString().trim();
 
-            // 점수 파싱 (숫자만 추출)
-            if (scoreStr && scoreStr !== "" && scoreStr !== "인정결") {
-              const scoreMatch = scoreStr.match(/(\d+\.?\d*)/);
+            // 빈 셀이면 null
+            if (!scoreStr || scoreStr === "" || scoreStr === "인정결") {
+              score = null;
+              if (import.meta.env.DEV) {
+                console.log(
+                  `[Parser] Empty cell for "${areaCol.areaName}" at col ${col}`
+                );
+              }
+            } else {
+              // 점수 파싱 (숫자만 추출)
+              const scoreMatch = scoreStr.match(/^(\d+\.?\d*)$/);
               if (scoreMatch) {
                 const parsedScore = parseFloat(scoreMatch[1]);
-                // 유효한 점수인지 확인 (0 이상, 만점 이하, 0이 아니면 무조건 유효)
+                // 유효한 점수인지 확인 (0 이상, 만점 이하)
                 if (
                   !isNaN(parsedScore) &&
                   parsedScore >= 0 &&
-                  (parsedScore <= areaCol.maxScore * 2 || parsedScore > 0)
+                  parsedScore <= areaCol.maxScore
                 ) {
                   score = parsedScore;
+                  if (import.meta.env.DEV) {
+                    console.log(
+                      `[Parser] Found score for "${areaCol.areaName}" at col ${col}: ${score}`
+                    );
+                  }
+                } else {
+                  score = null;
+                  if (import.meta.env.DEV) {
+                    console.log(
+                      `[Parser] Invalid score for "${areaCol.areaName}" at col ${col}: ${parsedScore} (max: ${areaCol.maxScore})`
+                    );
+                  }
+                }
+              } else {
+                score = null;
+                if (import.meta.env.DEV) {
                   console.log(
-                    `[Parser] Found score for "${
-                      areaCol.areaName
-                    }" at col ${col} (checked cols: ${Array.from(colsToCheck)
-                      .sort((a, b) => a - b)
-                      .join(", ")}): ${score}`
+                    `[Parser] Could not parse score for "${areaCol.areaName}" at col ${col}: "${scoreStr}"`
                   );
-                  break; // 점수를 찾았으면 중단
                 }
               }
             }
-          }
-
-          // 점수를 못 찾았으면 로그 출력
-          if (score === 0 && areaCol.col < rawRowData.length) {
-            const checkedCols = Array.from(colsToCheck)
-              .filter((c) => c >= 0 && c < rawRowData.length)
-              .sort((a, b) => a - b);
-            const rawValues = checkedCols
-              .map((c) => `[${c}]=${rawRowData[c] || ""}`)
-              .join(", ");
+          } else {
+            score = null;
             if (import.meta.env.DEV) {
               console.log(
-                `[Parser] Warning: No score found for "${areaCol.areaName}" at col ${areaCol.col}. Checked columns: ${rawValues}`
+                `[Parser] Column out of range for "${areaCol.areaName}": col ${col} (max: ${rawRowData.length - 1})`
               );
             }
           }

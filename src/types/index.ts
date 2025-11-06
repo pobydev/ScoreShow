@@ -13,7 +13,7 @@ export interface Student {
 
 export interface Evaluation {
   area: string; // 평가 영역명
-  score: number; // 획득 점수
+  score: number | null; // 획득 점수 (null = 미입력)
   maxScore: number; // 만점
 }
 
