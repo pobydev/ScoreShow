@@ -96,12 +96,32 @@ export function FilePicker() {
 
   const handleDownloadTemplate = async () => {
     try {
-      // public 폴더의 템플릿 파일을 그대로 다운로드
-      const response = await fetch('/ScoreShow_Template.xlsx');
-      if (!response.ok) {
-        throw new Error('템플릿 파일을 찾을 수 없습니다.');
+      let blob: Blob;
+      
+      // 일렉트론 환경 확인
+      if (typeof window !== 'undefined' && (window as any).electronAPI) {
+        // 일렉트론 환경: IPC를 통해 로컬 파일 읽기
+        const result = await (window as any).electronAPI.getTemplateFile();
+        if (!result.success) {
+          throw new Error(result.error || '템플릿 파일을 읽을 수 없습니다.');
+        }
+        // base64를 Blob으로 변환
+        const binaryString = atob(result.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      } else {
+        // 웹 환경: GitHub의 raw 파일 URL에서 템플릿 다운로드
+        const templateUrl = 'https://raw.githubusercontent.com/pobydev/ScoreShow/main/public/ScoreShow_Template.xlsx';
+        const response = await fetch(templateUrl);
+        if (!response.ok) {
+          throw new Error('템플릿 파일을 찾을 수 없습니다.');
+        }
+        blob = await response.blob();
       }
-      const blob = await response.blob();
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let win = null;
 
@@ -19,6 +20,9 @@ if (!gotTheLock) {
   });
 
   function createWindow() {
+    // 개발 모드 확인
+    const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+    
     win = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -29,13 +33,11 @@ if (!gotTheLock) {
         contextIsolation: true,
         enableRemoteModule: false,
         sandbox: false,
+        preload: path.join(__dirname, "preload.cjs"),
       },
       icon: path.join(__dirname, "../public/pwa-192x192.png"),
       show: false, // 창이 준비될 때까지 숨김
     });
-
-    // 개발 모드 확인
-    const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 
     if (isDev) {
       // 개발 모드: Vite 개발 서버
@@ -61,6 +63,20 @@ if (!gotTheLock) {
       win.loadFile(path.join(__dirname, "../dist/index.html"));
     }
 
+    // 개발자 도구 단축키 (프로덕션 모드에서도 사용 가능)
+    win.webContents.on('before-input-event', (event, input) => {
+      // F12 또는 Ctrl+Shift+I (Windows/Linux) 또는 Cmd+Option+I (Mac)
+      if (input.key === 'F12' || 
+          (input.control && input.shift && input.key === 'I') ||
+          (input.meta && input.alt && input.key === 'I')) {
+        if (win.webContents.isDevToolsOpened()) {
+          win.webContents.closeDevTools();
+        } else {
+          win.webContents.openDevTools();
+        }
+      }
+    });
+
     // 창이 준비되면 표시
     win.once("ready-to-show", () => {
       win.show();
@@ -76,6 +92,95 @@ if (!gotTheLock) {
       win = null;
     });
   }
+
+  // 템플릿 파일 경로 찾기 헬퍼 함수
+  function findTemplatePath() {
+    const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+    let templatePath;
+    
+    if (isDev) {
+      // 개발 모드: public 폴더에서 읽기
+      templatePath = path.join(__dirname, "../public/ScoreShow_Template.xlsx");
+    } else {
+      // 프로덕션 모드: extraResources로 배치된 파일은 process.resourcesPath에서 찾기
+      const resourcesPath = process.resourcesPath;
+      console.log("[Electron] Resources path:", resourcesPath);
+      
+      // extraResources로 배치된 파일 경로
+      templatePath = path.join(resourcesPath, "ScoreShow_Template.xlsx");
+      
+      // 파일이 없으면 app.asar 내부에서 찾기 시도
+      if (!fs.existsSync(templatePath)) {
+        const appPath = app.getAppPath();
+        console.log("[Electron] App path:", appPath);
+        
+        const possiblePaths = [
+          path.join(appPath, "ScoreShow_Template.xlsx"), // 루트
+          path.join(appPath, "dist", "ScoreShow_Template.xlsx"), // dist 폴더
+        ];
+        
+        for (const testPath of possiblePaths) {
+          console.log("[Electron] Trying path:", testPath);
+          if (fs.existsSync(testPath)) {
+            templatePath = testPath;
+            console.log("[Electron] Found template at:", testPath);
+            break;
+          }
+        }
+      } else {
+        console.log("[Electron] Found template in resources:", templatePath);
+      }
+    }
+    
+    if (!templatePath || !fs.existsSync(templatePath)) {
+      throw new Error(`템플릿 파일을 찾을 수 없습니다.`);
+    }
+    
+    return templatePath;
+  }
+
+  // IPC 핸들러: 템플릿 파일 읽기
+  ipcMain.handle("get-template-file", async () => {
+    try {
+      const templatePath = findTemplatePath();
+      const fileBuffer = fs.readFileSync(templatePath);
+      console.log("[Electron] Template file read successfully, size:", fileBuffer.length);
+      return {
+        success: true,
+        data: fileBuffer.toString("base64"),
+      };
+    } catch (error) {
+      console.error("[Electron] 템플릿 파일 읽기 실패:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  });
+
+  // IPC 핸들러: 템플릿 파일을 다운로드 폴더에 저장
+  ipcMain.handle("download-template", async () => {
+    try {
+      const templatePath = findTemplatePath();
+      const downloadsPath = app.getPath("downloads");
+      const destPath = path.join(downloadsPath, "ScoreShow_Template.xlsx");
+      
+      // 파일 복사
+      fs.copyFileSync(templatePath, destPath);
+      
+      console.log("[Electron] Template file saved to:", destPath);
+      return {
+        success: true,
+        path: destPath,
+      };
+    } catch (error) {
+      console.error("[Electron] 템플릿 파일 다운로드 실패:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  });
 
   // 앱이 준비되면 창 생성
   app.whenReady().then(() => {
