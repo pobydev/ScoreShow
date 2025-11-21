@@ -3,7 +3,7 @@
  */
 
 import { create } from "zustand";
-import type { Student, AppState, ColumnMapping } from "../types";
+import type { Student, AppState, ColumnMapping, Evaluation } from "../types";
 import { loadStudents, saveStudents, clearStorage } from "../core/storage";
 
 interface AppStore extends AppState {
@@ -15,6 +15,12 @@ interface AppStore extends AppState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setMapping: (mapping: ColumnMapping | null) => void;
+  setEditMode: (enabled: boolean) => void;
+  updateEvaluation: (
+    studentId: string,
+    evaluationIndex: number,
+    updates: Partial<Evaluation>
+  ) => Promise<void>;
 
   // Navigation
   nextStudent: () => void;
@@ -35,6 +41,7 @@ export const useStore = create<AppStore>((set, get) => ({
   isLoading: false,
   error: null,
   mapping: null,
+  isEditMode: false,
 
   // Actions
   setStudents: async (students) => {
@@ -89,6 +96,41 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   setMapping: (mapping) => set({ mapping }),
+  setEditMode: (enabled) => set({ isEditMode: enabled }),
+  updateEvaluation: async (studentId, evaluationIndex, updates) => {
+    const students = get().students.map((student) => {
+      if (student.id !== studentId) {
+        return student;
+      }
+
+      const evaluations = student.evaluations.map((evaluation, index) => {
+        if (index !== evaluationIndex) {
+          return evaluation;
+        }
+        const nextScore =
+          updates.score === undefined ? evaluation.score : updates.score;
+        const sanitizedScore =
+          typeof nextScore === "number" && isNaN(nextScore) ? null : nextScore;
+        const nextMaxScore =
+          updates.maxScore === undefined ? evaluation.maxScore : updates.maxScore;
+
+        return {
+          ...evaluation,
+          ...updates,
+          score: sanitizedScore,
+          maxScore:
+            typeof nextMaxScore === "number" && nextMaxScore > 0
+              ? nextMaxScore
+              : evaluation.maxScore,
+        };
+      });
+
+      return { ...student, evaluations };
+    });
+
+    set({ students });
+    await saveStudents(students);
+  },
 
   // Navigation
   nextStudent: () => {

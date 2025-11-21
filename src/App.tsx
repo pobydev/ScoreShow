@@ -67,22 +67,7 @@ function App() {
 
             {/* 데이터 안전성 및 사용 안내 */}
             <div className="mb-4 p-4 bg-ocean-50 border border-ocean-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div className="flex-1">
+              <div>
                   <h3 className="text-sm font-semibold text-ocean-900 mb-2">
                     🔒 데이터 안전성
                   </h3>
@@ -122,7 +107,17 @@ function App() {
                       강의실별일람표조회-전체영역
                     </li>
                   </ul>
-                </div>
+                  <p className="text-sm mt-3 p-3 rounded-lg border-2" style={{ 
+                    backgroundColor: '#fef3c7', 
+                    borderColor: '#f59e0b',
+                    color: '#92400e',
+                    fontWeight: '600'
+                  }}>
+                    💡 나이스 엑셀을 업로드했을때 여러 평가 영역이 하나만 인식될 때는 상단의 표준 엑셀서식을 다운받아 점수를 붙여넣어 업로드하면 모든 영역이 안정적으로 인식됩니다.
+                  </p>
+                  <p className="text-sm text-ocean-700 mt-3">
+                    ✏️ 업로드한 점수를 직접 수정하고 싶으시면 우측 패널의 <strong>"🔒 점수 잠금 해제"</strong> 버튼을 클릭하세요.
+                  </p>
               </div>
             </div>
 

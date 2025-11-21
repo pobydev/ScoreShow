@@ -45,6 +45,7 @@ export interface AppState {
   isLoading: boolean;
   error: string | null;
   mapping: ColumnMapping | null;
+  isEditMode: boolean;
 }
 
 

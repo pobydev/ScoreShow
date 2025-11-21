@@ -89,6 +89,179 @@ function getRawCellValue(
   return (cell.w || cell.v || "").toString();
 }
 
+function normalizeHeaderLabel(value: string): string {
+  return (value || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function parseNumericCell(value: string): number | null {
+  if (!value) return null;
+  const numeric = parseFloat(value.replace(/[^-0-9.]/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
+  const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+  if (range.e.r < 2) {
+    // 최소 0행(설명), 1행(헤더), 2행(첫 학생) 필요
+    return null;
+  }
+
+  // 1행(인덱스 1)에서 헤더 읽기
+  const headerRow: string[] = [];
+  for (let col = 0; col <= range.e.c; col++) {
+    headerRow.push(getRawCellValue(worksheet, 1, col).trim());
+  }
+
+  const gradeCol = headerRow.findIndex(
+    (value) => normalizeHeaderLabel(value) === "학년"
+  );
+  const classCol = headerRow.findIndex(
+    (value) => normalizeHeaderLabel(value) === "반"
+  );
+  const numberCol = headerRow.findIndex(
+    (value) => normalizeHeaderLabel(value) === "번호"
+  );
+  const nameCol = headerRow.findIndex(
+    (value) => normalizeHeaderLabel(value) === "이름"
+  );
+
+  if (nameCol === -1 || classCol === -1 || numberCol === -1) {
+    return null;
+  }
+
+  // 영역 컬럼 찾기: 영역1 이름, 영역1 만점, 영역2 이름, 영역2 만점, ...
+  const areaColumns: Array<{
+    areaIndex: number;
+    nameCol: number; // 영역 이름이 있는 컬럼 (1행에서 읽음)
+    scoreCol: number; // 점수가 있는 컬럼 (2행부터 읽음, nameCol과 동일)
+    maxScoreCol: number; // 만점이 있는 컬럼
+    areaName: string; // 1행에서 읽은 영역 이름
+    defaultMaxScore: number; // 2행에서 읽은 기본 만점
+  }> = [];
+
+  for (let col = 0; col <= range.e.c; col++) {
+    const header = headerRow[col];
+    // "영역1 이름", "영역2 이름" 패턴 찾기
+    const areaNameMatch = normalizeHeaderLabel(header).match(/^영역(\d+)이름$/);
+    if (areaNameMatch) {
+      const index = parseInt(areaNameMatch[1], 10);
+      const maxScoreCol = col + 1; // 영역1 만점은 영역1 이름 다음 컬럼
+      
+      // 1행에서 영역 이름 읽기 (사용자가 수정한 실제 영역명)
+      let areaName = getRawCellValue(worksheet, 1, col).trim();
+      
+      // 영역 이름이 비어있거나 기본값인 경우 처리
+      if (!areaName || areaName === "영역1 이름" || areaName === "영역2 이름" || areaName === "영역3 이름" || areaName === "영역4 이름" || areaName === "영역5 이름") {
+        // 기본값으로 "영역1", "영역2" 등 사용
+        areaName = `영역${index}`;
+      }
+
+      // 2행에서 기본 만점 읽기
+      const defaultMaxScoreRaw = getRawCellValue(worksheet, 2, maxScoreCol).trim();
+      const defaultMaxScore = parseNumericCell(defaultMaxScoreRaw);
+      
+      // 만점이 없으면 기본값 100 사용
+      const finalMaxScore = defaultMaxScore && defaultMaxScore > 0 ? defaultMaxScore : 100;
+      
+      areaColumns.push({
+        areaIndex: index,
+        nameCol: col,
+        scoreCol: col, // 점수는 영역 이름 칸에 입력됨
+        maxScoreCol: maxScoreCol,
+        areaName: areaName,
+        defaultMaxScore: finalMaxScore,
+      });
+    }
+  }
+
+  if (areaColumns.length === 0) {
+    return null;
+  }
+
+  const studentsMap = new Map<string, Student>();
+
+  // 2행(인덱스 2)부터 학생 데이터 읽기 (2행은 예시이지만 실제 데이터로도 사용 가능)
+  for (let row = 2; row <= range.e.r; row++) {
+    const gradeValue =
+      gradeCol !== -1 ? getRawCellValue(worksheet, row, gradeCol).trim() : "";
+    const classValue =
+      classCol !== -1 ? getRawCellValue(worksheet, row, classCol).trim() : "";
+    const numberValue =
+      numberCol !== -1 ? getRawCellValue(worksheet, row, numberCol).trim() : "";
+    const name = getRawCellValue(worksheet, row, nameCol).trim();
+
+    if (!name) {
+      continue;
+    }
+
+    let grade = parseInt(gradeValue, 10);
+    if (!Number.isFinite(grade)) {
+      grade = 1;
+    }
+
+    const classNum = parseInt(classValue, 10);
+    const number = parseInt(numberValue, 10);
+
+    if (!Number.isFinite(classNum) || !Number.isFinite(number)) {
+      continue;
+    }
+
+    const studentId = `${grade}-${classNum}-${number}`;
+    if (!studentsMap.has(studentId)) {
+      studentsMap.set(studentId, {
+        id: studentId,
+        grade,
+        class: classNum,
+        number: number,
+        name,
+        evaluations: [],
+      });
+    }
+
+    const student = studentsMap.get(studentId)!;
+
+    // 각 영역의 점수 읽기
+    for (const areaCol of areaColumns) {
+      // 점수는 영역 이름 칸(scoreCol)에서 읽음
+      const scoreRaw = getRawCellValue(worksheet, row, areaCol.scoreCol).trim();
+      const score = parseNumericCell(scoreRaw);
+      
+      // 만점은 만점 칸에서 읽고, 비어있으면 2행의 기본 만점 사용
+      const maxScoreRaw = getRawCellValue(worksheet, row, areaCol.maxScoreCol).trim();
+      const maxScoreCandidate = parseNumericCell(maxScoreRaw);
+      const maxScore =
+        maxScoreCandidate && maxScoreCandidate > 0
+          ? maxScoreCandidate
+          : areaCol.defaultMaxScore;
+
+      // 점수가 있으면 평가 항목 추가
+      if (score !== null) {
+        student.evaluations.push({
+          area: areaCol.areaName,
+          score: score,
+          maxScore,
+        });
+      }
+    }
+  }
+
+  const students = Array.from(studentsMap.values()).filter(
+    (student) => student.evaluations.length > 0
+  );
+
+  if (students.length === 0) {
+    return null;
+  }
+
+  students.sort((a, b) => {
+    if (a.grade !== b.grade) return a.grade - b.grade;
+    if (a.class !== b.class) return a.class - b.class;
+    return a.number - b.number;
+  });
+
+  return students;
+}
+
 self.onmessage = async function (
   e: MessageEvent<{ file: File; mapping?: ColumnMapping }>
 ) {
@@ -188,6 +361,17 @@ self.onmessage = async function (
       }
     }
 
+    // 표준 템플릿인지 먼저 확인
+    const templateStudents = parseStandardTemplate(worksheet);
+    if (templateStudents) {
+      self.postMessage({
+        success: true,
+        students: templateStudents,
+        mapping: null,
+      });
+      return;
+    }
+
     // 컬럼 매핑
     let mapping: ColumnMapping;
     if (providedMapping && Object.keys(providedMapping).length > 0) {
@@ -246,6 +430,8 @@ self.onmessage = async function (
     let extractedMaxScore: number | null = null;
     let extractedAreaName: string = "";
     let extractedAreaFromHeader = false;
+    // 병합된 "점수" 컬럼 정보 저장 (dataStartRow 설정 후에 사용)
+    let scoreMergeInfo: { s: { c: number }; e: { c: number }; headerRow: number } | null = null;
 
     // class/number 컬럼 제외하기 위한 Set
     const classColumns = new Set(
@@ -259,16 +445,18 @@ self.onmessage = async function (
       const rowData = headerRows[row];
       for (let col = 0; col < rowData.length; col++) {
         const cellValue = rowData[col] || "";
-        // "영역 : 듣기" 패턴 찾기
-        const areaMatch = cellValue.match(/영역\s*[:：]\s*([가-힣]+)/i);
+        // "영역 : 쓰기1" 또는 "영역: 쓰기1 (서·논술형)" 패턴 찾기
+        // 숫자와 괄호 내용도 포함하여 매칭
+        const areaMatch = cellValue.match(/영역\s*[:：]\s*([가-힣\d]+(?:\s*\([^)]*\))?)/i);
         if (areaMatch) {
-          extractedAreaName = areaMatch[1];
+          // 괄호 내용 제거 (예: "쓰기1 (서·논술형)" -> "쓰기1")
+          extractedAreaName = areaMatch[1].replace(/\s*\([^)]*\)/g, "").trim();
           extractedAreaFromHeader = true;
           if (import.meta.env.DEV) {
             console.log(
               `[Parser] Found area name from header metadata (row ${
                 row + 1
-              }): ${extractedAreaName}`
+              }, col ${col}): "${cellValue}" -> "${extractedAreaName}"`
             );
           }
 
@@ -318,11 +506,10 @@ self.onmessage = async function (
     }
 
     // 여러 평가 영역 컬럼 찾기 (표 헤더에서 "쓰기1", "말하기", "듣기" 등)
-    // 헤더 행들을 모두 스캔하여 평가 영역 패턴이 있는 모든 컬럼 찾기
-    // extractedAreaFromHeader가 true여도 여러 영역을 찾기 위해 항상 실행
+    // 단일 영역 형식(extractedAreaFromHeader가 true)인 경우는 건너뛰기
     // 헤더 행에서 평가 영역 패턴 찾기: "쓰기1", "쓰기2", "말하기", "듣기", "읽기" 등
-
-    for (let row = 0; row < headerRows.length; row++) {
+    if (!extractedAreaFromHeader) {
+      for (let row = 0; row < headerRows.length; row++) {
         const rowData = headerRows[row];
         const rawRowData: string[] = [];
         for (let col = 0; col <= maxCol; col++) {
@@ -336,6 +523,18 @@ self.onmessage = async function (
         ) {
           // class/number/name 컬럼은 제외
           if (classColumns.has(col)) continue;
+
+          // 병합 범위 내의 컬럼 중 첫 번째 컬럼이 아닌 경우 건너뛰기
+          let skipCol = false;
+          for (const merge of merges) {
+            const { s, e } = merge;
+            if (row >= s.r && row <= e.r && col > s.c && col <= e.c) {
+              // 병합 범위의 첫 번째 컬럼이 아니면 건너뛰기
+              skipCol = true;
+              break;
+            }
+          }
+          if (skipCol) continue;
 
           const cellValue = rawRowData[col] || rowData[col] || "";
           if (!cellValue || typeof cellValue !== "string") continue;
@@ -403,6 +602,7 @@ self.onmessage = async function (
 
               // 병합된 셀인지 확인: 병합의 첫 번째 컬럼 인덱스 사용
               let actualCol = col;
+              let foundMergeEndCol = col; // 병합 범위의 마지막 컬럼
 
               // 병합 정보 확인
               for (const merge of merges) {
@@ -410,6 +610,7 @@ self.onmessage = async function (
                 // 현재 행이 병합 범위에 있고, 컬럼이 병합 범위 내에 있는지 확인
                 if (row >= s.r && row <= e.r && col >= s.c && col <= e.c) {
                   actualCol = s.c; // 병합의 첫 번째 컬럼 사용
+                  foundMergeEndCol = e.c; // 병합 범위의 마지막 컬럼 저장
                   if (import.meta.env.DEV) {
                     console.log(
                       `[Parser] Area "${areaName}" found in merged cell at row ${row}, using first column ${actualCol} (range: ${s.c}-${e.c})`
@@ -428,11 +629,16 @@ self.onmessage = async function (
                     `[Parser] Found evaluation area column ${actualCol}: "${areaName}" (maxScore: ${maxScore})`
                   );
                 }
+                // 병합 범위의 마지막 컬럼까지 스킵
+                if (foundMergeEndCol > col) {
+                  col = foundMergeEndCol; // 다음 반복에서 foundMergeEndCol + 1부터 시작
+                }
               }
             }
           }
         }
       }
+    }
 
     // areaColumns 정렬 (컬럼 순서대로)
     areaColumns.sort((a, b) => a.col - b.col);
@@ -522,6 +728,14 @@ self.onmessage = async function (
       console.log(
         `[Parser] Extracted area: ${extractedAreaName}, maxScore: ${extractedMaxScore}, fromHeader: ${extractedAreaFromHeader}`
       );
+      console.log(`[Parser] Current mapping before score detection:`, JSON.stringify({
+        score: mapping.score,
+        area: mapping.area,
+        class: mapping.class,
+        number: mapping.number,
+        name: mapping.name,
+        maxScore: mapping.maxScore,
+      }, null, 2));
     }
 
     // 점수 컬럼이 명시적으로 매핑되지 않은 경우 평가 영역 컬럼을 점수 컬럼으로도 사용
@@ -531,6 +745,58 @@ self.onmessage = async function (
         console.log(
           `[Parser] Using area column (${areaColumnIndex}) as score column`
         );
+      }
+    }
+
+    // 단일 영역 형식에서 점수 컬럼을 찾지 못했거나 잘못 매핑된 경우, 병합된 "점수" 컬럼 범위 내에서 찾기
+    // extractedAreaFromHeader가 true이면 헤더에서 영역을 찾았으므로, 점수 컬럼도 헤더에서 찾아야 함
+    if (extractedAreaFromHeader) {
+      // 기존 매핑이 있더라도 병합된 "점수" 컬럼을 찾아서 확인/수정
+      // 원시 데이터에서 직접 "점수" 헤더 찾기 (병합 처리 전 데이터)
+      let foundScoreHeader = false;
+      for (let row = 0; row < Math.min(headerRows.length, 15); row++) {
+        // 원시 데이터에서 직접 확인
+        for (let col = 0; col <= maxCol; col++) {
+          const rawCellValue = getRawCellValue(worksheet, row, col);
+          const cellValue = rawCellValue || "";
+          
+          // "점수" 헤더 찾기
+          if (/점수|득점|원점수|성취점/i.test(cellValue)) {
+            // 병합된 셀인지 확인
+            let scoreCol = col;
+            let mergeInfo: { s: { c: number }; e: { c: number } } | null = null;
+            for (const merge of merges) {
+              const { s, e } = merge;
+              if (row >= s.r && row <= e.r && col >= s.c && col <= e.c) {
+                // 병합 범위의 첫 번째 컬럼 사용
+                scoreCol = s.c;
+                mergeInfo = { s, e };
+                // 병합 정보 저장 (dataStartRow 설정 후에 사용)
+                scoreMergeInfo = { s, e, headerRow: row };
+                if (import.meta.env.DEV) {
+                  console.log(
+                    `[Parser] Found merged "점수" header at row ${row + 1}, col ${col}, using first column ${scoreCol} (merge range: ${s.c}-${e.c})`
+                  );
+                }
+                break;
+              }
+            }
+            // 일단 병합 범위의 첫 번째 컬럼으로 매핑 (dataStartRow 설정 후에 실제 데이터 컬럼 찾기)
+            // 기존 매핑이 없거나, 병합 범위의 첫 번째 컬럼과 다르면 업데이트
+            if (mapping.score === undefined || mapping.score !== scoreCol) {
+              const oldScore = mapping.score;
+              mapping.score = scoreCol;
+              foundScoreHeader = true;
+              if (import.meta.env.DEV) {
+                console.log(
+                  `[Parser] Found/Updated score column from "점수" header: ${scoreCol} (row ${row + 1}${mergeInfo ? `, merge range: ${mergeInfo.s.c}-${mergeInfo.e.c}` : ''})${oldScore !== undefined ? ` (was ${oldScore})` : ''}`
+                );
+              }
+            }
+            break;
+          }
+        }
+        if (foundScoreHeader) break;
       }
     }
 
@@ -557,7 +823,7 @@ self.onmessage = async function (
       classHeaderRow >= 0 ? classHeaderRow + 1 : maxHeaderRows;
 
     let dataStartRow = minSearchRow;
-    let candidateRows: {
+    const candidateRows: {
       row: number;
       value: string;
       classNum: number;
@@ -814,6 +1080,115 @@ self.onmessage = async function (
     if (import.meta.env.DEV) {
       console.log(`[Parser] Final data start row: ${dataStartRow + 1}`);
     }
+
+    // 병합된 "점수" 컬럼을 찾은 경우, 병합 범위 내에서 실제 점수 데이터가 있는 컬럼 찾기
+    // dataStartRow가 설정된 후에 실행해야 함
+    if (mapping.score !== undefined && extractedAreaFromHeader && dataStartRow > 0 && scoreMergeInfo) {
+      // 저장된 병합 정보를 사용하여 병합 범위 내에서 실제 점수 데이터가 있는 컬럼 찾기
+      const { s, e } = scoreMergeInfo;
+      const checkRows = Math.min(dataStartRow + 10, range.e.r); // 더 많은 행 확인
+      const scoreCandidates: { col: number; count: number; firstValue: number | null }[] = [];
+      
+      // 병합 범위 내의 모든 컬럼을 확인하여 실제 점수 데이터가 있는 컬럼 찾기
+      for (let checkCol = s.c; checkCol <= e.c; checkCol++) {
+        // class/number/name 컬럼은 제외
+        if (checkCol === mapping.class || checkCol === mapping.number || checkCol === mapping.name) {
+          continue;
+        }
+        
+        let numericCount = 0;
+        let firstNumericValue: number | null = null;
+        for (let checkRow = dataStartRow; checkRow <= checkRows; checkRow++) {
+          const rawValue = getRawCellValue(worksheet, checkRow, checkCol);
+          const trimmed = (rawValue || "").trim();
+          
+          // 빈 셀이 아니고 숫자 데이터인지 확인
+          if (trimmed && trimmed !== "") {
+            const numeric = parseNumericCell(rawValue);
+            if (numeric !== null && numeric >= 0) {
+              numericCount++;
+              if (firstNumericValue === null) {
+                firstNumericValue = numeric;
+              }
+            }
+          }
+        }
+        
+        if (numericCount > 0) {
+          scoreCandidates.push({ col: checkCol, count: numericCount, firstValue: firstNumericValue });
+        }
+      }
+      
+      // 숫자 데이터가 가장 많이 있는 컬럼을 선택 (같으면 첫 번째 컬럼 우선)
+      if (scoreCandidates.length > 0) {
+        scoreCandidates.sort((a, b) => {
+          // 먼저 숫자 데이터 개수로 정렬
+          if (b.count !== a.count) {
+            return b.count - a.count;
+          }
+          // 개수가 같으면 첫 번째 컬럼에 가까운 것을 선택
+          return a.col - b.col;
+        });
+        
+        const foundDataCol = scoreCandidates[0].col;
+        if (foundDataCol !== mapping.score) {
+          const oldScore = mapping.score;
+          mapping.score = foundDataCol;
+          if (import.meta.env.DEV) {
+            console.log(
+              `[Parser] Updated score column from merged range ${s.c}-${e.c}: ${foundDataCol} (${scoreCandidates[0].count} numeric values, was ${oldScore})`
+            );
+            console.log(`[Parser] Score candidates:`, scoreCandidates.map(c => `col ${c.col}: ${c.count} values`).join(', '));
+          }
+        } else if (import.meta.env.DEV) {
+          console.log(
+            `[Parser] Score column ${mapping.score} is correct within merge range ${s.c}-${e.c} (${scoreCandidates[0].count} numeric values found)`
+          );
+        }
+      }
+    }
+
+    // 단일 영역 형식에서 점수 컬럼을 여전히 찾지 못한 경우, 데이터 행에서 숫자가 있는 컬럼 찾기
+    if (mapping.score === undefined && extractedAreaFromHeader) {
+      const classColumns = new Set(
+        [mapping.class, mapping.number, mapping.name].filter(
+          (col): col is number => col !== undefined
+        )
+      );
+      
+      // 데이터 시작 행부터 몇 행을 확인하여 숫자가 있는 컬럼 찾기
+      const checkRows = Math.min(dataStartRow + 10, range.e.r);
+      const scoreCandidates: { col: number; count: number }[] = [];
+      
+      for (let col = 0; col <= maxCol; col++) {
+        if (classColumns.has(col)) continue;
+        
+        let numericCount = 0;
+        for (let row = dataStartRow; row <= checkRows; row++) {
+          const rawValue = getRawCellValue(worksheet, row, col);
+          const numeric = parseNumericCell(rawValue);
+          if (numeric !== null) {
+            numericCount++;
+          }
+        }
+        
+        if (numericCount > 0) {
+          scoreCandidates.push({ col, count: numericCount });
+        }
+      }
+      
+      // 숫자가 가장 많이 있는 컬럼을 점수 컬럼으로 선택
+      if (scoreCandidates.length > 0) {
+        scoreCandidates.sort((a, b) => b.count - a.count);
+        mapping.score = scoreCandidates[0].col;
+        if (import.meta.env.DEV) {
+          console.log(
+            `[Parser] Auto-detected score column from data: ${mapping.score} (${scoreCandidates[0].count} numeric values found)`
+          );
+        }
+      }
+    }
+
     const parsedRows: ParsedRow[] = [];
 
     for (let row = dataStartRow; row <= range.e.r; row++) {
@@ -989,6 +1364,57 @@ self.onmessage = async function (
       // 점수
       if (mapping.score !== undefined) {
         parsed.score = getValueFromMappedColumn(mapping.score);
+        
+        // 해당 행에 결시 관련 텍스트가 있는지 확인
+        const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+        let hasAbsenceReason = false;
+        
+        // 행의 모든 컬럼을 확인하여 결시 관련 텍스트 찾기
+        for (let col = 0; col < rawRowData.length; col++) {
+          // 점수 컬럼은 제외 (점수 컬럼에 '전출'이 있을 수도 있음)
+          if (col === mapping.score) continue;
+          
+          const cellValue = rawRowData[col] || "";
+          const trimmed = cellValue.toString().trim();
+          
+          if (trimmed && absenceKeywords.test(trimmed)) {
+            hasAbsenceReason = true;
+            if (import.meta.env.DEV && parsedRows.length === 0) {
+              console.log(`[Parser] Found absence reason "${trimmed}" in column ${col}, setting score to null`);
+            }
+            break;
+          }
+        }
+        
+        // 결시 관련 텍스트가 있으면 점수를 null로 설정
+        if (hasAbsenceReason) {
+          parsed.score = "";
+        }
+        
+        // 디버깅: 첫 번째 행에서 점수 읽기 확인
+        if (parsedRows.length === 0 && import.meta.env.DEV) {
+          console.log(`[Parser] Reading score from column ${mapping.score}:`, JSON.stringify({
+            rawValue: rawRowData[mapping.score],
+            parsedScore: parsed.score,
+            hasAbsenceReason,
+            rawRowDataSample: rawRowData.slice(0, 10),
+            columnMapping: {
+              class: mapping.class,
+              number: mapping.number,
+              name: mapping.name,
+              score: mapping.score,
+            }
+          }, null, 2));
+        }
+      } else {
+        // 점수 컬럼이 없으면 경고
+        if (parsedRows.length === 0 && import.meta.env.DEV) {
+          console.warn(`[Parser] Score column not mapped!`, {
+            mapping,
+            extractedAreaFromHeader,
+            extractedAreaName,
+          });
+        }
       }
 
       // 만점: 헤더에서 추출한 값 우선 사용
@@ -1001,12 +1427,28 @@ self.onmessage = async function (
       // 반/번호 중 하나라도 있으면 파싱 시도
       if (parsed.class || parsed.number) {
         // 디버깅: 첫 번째 행 로그
-        if (parsedRows.length === 0) {
-          console.log("[Parser] First parsed row:", {
+        if (parsedRows.length === 0 && import.meta.env.DEV) {
+          console.log("[Parser] First parsed row:", JSON.stringify({
             raw: rawRowData.slice(0, 10),
-            parsed,
-            mapping,
-          });
+            parsed: {
+              grade: parsed.grade,
+              class: parsed.class,
+              number: parsed.number,
+              name: parsed.name,
+              area: parsed.area,
+              score: parsed.score,
+              maxScore: parsed.maxScore,
+            },
+            mapping: {
+              grade: mapping.grade,
+              class: mapping.class,
+              number: mapping.number,
+              name: mapping.name,
+              area: mapping.area,
+              score: mapping.score,
+              maxScore: mapping.maxScore,
+            },
+          }, null, 2));
         }
         parsedRows.push(parsed);
       }
@@ -1083,12 +1525,15 @@ self.onmessage = async function (
             const scoreValue = rawRowData[col] || "";
             const scoreStr = scoreValue.toString().trim();
 
-            // 빈 셀이면 null
-            if (!scoreStr || scoreStr === "" || scoreStr === "인정결") {
+            // 결시 관련 텍스트 체크
+            const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+            
+            // 빈 셀이거나 결시 관련 텍스트면 null
+            if (!scoreStr || scoreStr === "" || absenceKeywords.test(scoreStr)) {
               score = null;
               if (import.meta.env.DEV) {
                 console.log(
-                  `[Parser] Empty cell for "${areaCol.areaName}" at col ${col}`
+                  `[Parser] Empty or absence reason cell for "${areaCol.areaName}" at col ${col}: "${scoreStr}"`
                 );
               }
             } else {

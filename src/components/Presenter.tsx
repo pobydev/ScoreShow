@@ -149,7 +149,7 @@ export function Presenter() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isBlackout, isFullscreen, nextStudent, prevStudent, setBlackout, setPresenterMode, pendingDirection, selectedStudentId, currentIndex, setSelectedStudent]);
+  }, [isBlackout, isFullscreen, nextStudent, prevStudent, setBlackout, setPresenterMode, pendingDirection, selectedStudentId, currentIndex, setSelectedStudent, students.length]);
 
   // 전체화면 토글
   const toggleFullscreen = async () => {

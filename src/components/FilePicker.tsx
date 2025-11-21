@@ -46,12 +46,17 @@ export function FilePicker() {
       worker.postMessage({ file });
 
       worker.onmessage = async (e) => {
-        const { success, students, mapping, error } = e.data;
+        const { success, students, mapping, error } = e.data as {
+          success: boolean;
+          students: Parameters<typeof setStudents>[0];
+          mapping: ColumnMapping | null;
+          error?: string;
+        };
 
         if (success) {
           // setStudents가 자동으로 IndexedDB에 저장함
           await setStudents(students);
-          setMapping(mapping as ColumnMapping);
+          setMapping(mapping ?? null);
           // 성공 피드백 표시
           setError(
             `✅ ${students.length}명의 학생 데이터가 성공적으로 로드되었습니다.`
@@ -89,9 +94,31 @@ export function FilePicker() {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      // public 폴더의 템플릿 파일을 그대로 다운로드
+      const response = await fetch('/ScoreShow_Template.xlsx');
+      if (!response.ok) {
+        throw new Error('템플릿 파일을 찾을 수 없습니다.');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ScoreShow_Template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('템플릿 다운로드 실패:', error);
+      setError('템플릿 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="rounded-lg shadow p-4" style={{ backgroundColor: 'var(--card)' }}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <label className="text-sm font-medium whitespace-nowrap" style={{ color: 'var(--foreground)' }}>
           엑셀 파일:
         </label>
@@ -115,6 +142,17 @@ export function FilePicker() {
           }}
           aria-label="엑셀 파일 선택"
         />
+        <button
+          type="button"
+          onClick={handleDownloadTemplate}
+          className="text-sm font-semibold inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 transition-colors"
+          style={{
+            backgroundColor: 'var(--accent)',
+            color: 'var(--accent-foreground)',
+          }}
+        >
+          📄 표준 서식 다운로드
+        </button>
         {isProcessing && (
           <div className="flex items-center gap-2" style={{ color: 'var(--primary)' }}>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: 'var(--primary)' }}></div>

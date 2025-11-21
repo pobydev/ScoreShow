@@ -34,8 +34,10 @@
 
 ✨ 주요 기능
 - 나이스 엑셀 파일 자동 인식
+- 표준 서식 템플릿 제공 (여러 평가 영역이 하나만 보일 때 해결)
 - 발표 모드로 학생을 한 명씩 개별적으로 표시
 - 화이트아웃 기능으로 자연스러운 전환
+- 자물쇠를 풀고 점수/만점을 바로 수정 (자동 저장)
 - 100% 오프라인 (개인정보 완벽 보호)
 
 🔒 보안
@@ -52,12 +54,16 @@
 GitHub Releases에서 다운로드하세요:
 https://github.com/pobydev/ScoreShow/releases/latest
 
+바로 다운로드 (Windows):
+https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow.Setup.1.1.0.exe
+
 📖 사용 방법
 자세한 사용 가이드는 GitHub 저장소에 있습니다:
 https://github.com/pobydev/ScoreShow
 
-💡 사용 팁
+- 💡 사용 팁
 - 나이스에서 엑셀 파일을 xls 형식으로 다운로드하세요
+- 여러 평가 영역이 하나만 인식되면 프로그램 상단의 **표준 서식**을 내려받아 점수를 붙여넣은 뒤 업로드하세요
 - 발표 모드에서 화살표 키로 학생을 이동할 수 있습니다
 - F 키로 전체화면 모드 전환 가능
 
@@ -83,10 +89,13 @@ https://github.com/pobydev/ScoreShow
 
 ✨ 주요 기능
 - 나이스 엑셀 파일 자동 인식
+- 표준 서식 템플릿으로 여러 평가 영역을 안정적으로 파싱
 - 학생을 한 명씩 개별적으로 표시
+- 자물쇠를 해제하고 점수/만점을 직접 수정
 - 100% 오프라인 (개인정보 보호)
 
 다운로드: https://github.com/pobydev/ScoreShow/releases/latest
+바로 다운로드: https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow.Setup.1.1.0.exe
 사용 가이드: https://github.com/pobydev/ScoreShow
 
 도움이 되셨다면 좋겠습니다!

@@ -39,7 +39,7 @@ git remote add origin https://github.com/pobydev/ScoreShow.git
 
 # 파일 추가 및 커밋
 git add .
-git commit -m "Initial commit: ScoreShow v1.0.0"
+git commit -m "Initial commit: ScoreShow v1.1.0"
 
 # GitHub에 푸시
 git branch -M main
@@ -55,10 +55,10 @@ git push -u origin main
 ### 4. 릴리스 정보 입력
 
 #### Tag version
-- `v1.0.0` 입력 (또는 원하는 버전)
+- `v1.1.0` 입력 (또는 원하는 버전)
 
 #### Release title
-- `ScoreShow v1.0.0` 또는 `ScoreShow v1.0.0 - 첫 릴리스`
+- `ScoreShow v1.1.0` 또는 `ScoreShow v1.1.0 - 새 릴리스`
 
 #### Description
 RELEASE_NOTES.md의 내용을 복사하여 붙여넣기
@@ -86,7 +86,7 @@ Windows 버전을 다운로드하여 설치하세요.
 ### 5. 파일 업로드
 
 1. **"Attach binaries"** 또는 드래그 앤 드롭 영역 클릭
-2. `release/ScoreShow Setup 1.0.0.exe` 파일 선택
+2. `release/ScoreShow Setup 1.1.0.exe` 파일 선택
 3. 파일이 업로드될 때까지 대기
 
 ### 6. 릴리스 발행
@@ -99,7 +99,7 @@ Windows 버전을 다운로드하여 설치하세요.
 릴리스가 생성되면 다음과 같은 링크가 생성됩니다:
 
 ```
-https://github.com/pobydev/ScoreShow/releases/tag/v1.0.0
+https://github.com/pobydev/ScoreShow/releases/tag/v1.1.0
 ```
 
 또는 최신 릴리스:
