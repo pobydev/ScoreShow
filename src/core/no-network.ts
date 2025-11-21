@@ -11,7 +11,9 @@ window.fetch = function (...args: Parameters<typeof fetch>) {
   if (
     url.startsWith("blob:") ||
     url.startsWith("data:") ||
-    url.startsWith("/")
+    url.startsWith("/") ||
+    // 템플릿 파일 다운로드를 위한 GitHub raw URL 허용
+    url.includes("raw.githubusercontent.com/pobydev/ScoreShow/main/public/ScoreShow_Template.xlsx")
   ) {
     return originalFetch.apply(window, args);
   }

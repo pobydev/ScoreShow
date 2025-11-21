@@ -50,8 +50,14 @@
     },
     "files": [
       "dist/**/*",
-      "electron/main.cjs",
+      "electron/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "public/ScoreShow_Template.xlsx",
+        "to": "ScoreShow_Template.xlsx"
+      }
     ],
     "win": {
       "icon": "logo.ico",
