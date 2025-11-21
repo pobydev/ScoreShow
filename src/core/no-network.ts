@@ -52,19 +52,21 @@ XMLHttpRequest.prototype.open = function (
 // WebSocket 오버라이드
 if (typeof WebSocket !== "undefined") {
   const OriginalWebSocket = WebSocket;
-  (window as any).WebSocket = class BlockedWebSocket extends OriginalWebSocket {
-    constructor(url: string | URL, ...args: any[]) {
-      const urlStr = typeof url === "string" ? url : url.toString();
-      if (
-        !urlStr.startsWith("ws://localhost") &&
-        !urlStr.startsWith("wss://localhost")
-      ) {
-        console.warn("[Network Blocked] WebSocket prevented:", urlStr);
-        throw new Error("WebSocket connections are disabled in offline mode");
+  type WebSocketProtocol = string | string[] | undefined;
+  (window as typeof window & { WebSocket: typeof WebSocket }).WebSocket =
+    class BlockedWebSocket extends OriginalWebSocket {
+      constructor(url: string | URL, protocols?: WebSocketProtocol) {
+        const urlStr = typeof url === "string" ? url : url.toString();
+        if (
+          !urlStr.startsWith("ws://localhost") &&
+          !urlStr.startsWith("wss://localhost")
+        ) {
+          console.warn("[Network Blocked] WebSocket prevented:", urlStr);
+          throw new Error("WebSocket connections are disabled in offline mode");
+        }
+        super(url, protocols);
       }
-      super(url, ...args);
-    }
-  };
+    };
 }
 
 if (import.meta.env.DEV) {

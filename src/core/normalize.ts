@@ -15,6 +15,15 @@ function parseScore(scoreStr: string | undefined): number | null {
   // 공백 제거 및 정규화
   let normalized = scoreStr.toString().trim().replace(/\s+/g, "");
 
+  // 빈 문자열 체크 (공백 제거 후)
+  if (!normalized || normalized === "") return null;
+
+  // 결시 관련 텍스트 필터링
+  const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+  if (absenceKeywords.test(normalized)) {
+    return null;
+  }
+
   // "10점" 형식 처리
   normalized = normalized.replace(/점$/, "");
 
@@ -22,14 +31,21 @@ function parseScore(scoreStr: string | undefined): number | null {
   if (normalized.includes("/")) {
     const parts = normalized.split("/");
     normalized = parts[0]?.trim() || "";
+    if (!normalized) return null;
   }
 
-  // 숫자 추출
-  const match = normalized.match(/(\d+\.?\d*)/);
+  // 한국식 숫자 형식 처리 (쉼표를 소수점으로 변환: "6,50" -> "6.50")
+  normalized = normalized.replace(/,/g, ".");
+
+  // 숫자 추출 (소수점 포함)
+  const match = normalized.match(/^(\d+\.?\d*)$/);
   if (!match) return null;
 
   const num = parseFloat(match[1]);
-  return isNaN(num) ? null : num;
+  if (isNaN(num)) return null;
+  
+  // 유효한 숫자인지 확인 (0 이상)
+  return num >= 0 ? num : null;
 }
 
 /**
@@ -144,7 +160,7 @@ export function normalizeRow(row: ParsedRow): {
   }
 
   const name = normalizeName(row.name);
-  let score = parseScore(row.score || row.score);
+  const score = parseScore(row.score);
   let maxScore = parseMaxScore(row.maxScore, score);
 
   // 필수 필드 검증 (학년은 선택적, 반/번호와 이름은 필수)

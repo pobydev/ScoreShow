@@ -5,9 +5,28 @@
 import { useStore } from "../store/store";
 
 export function PreviewPanel() {
-  const { students, selectedStudentId, clearAllData } = useStore();
+  const {
+    students,
+    selectedStudentId,
+    clearAllData,
+    isEditMode,
+    setEditMode,
+    updateEvaluation,
+  } = useStore();
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
+
+  const handleToggleEditMode = () => {
+    if (!isEditMode) {
+      const confirmed = confirm(
+        "점수 수정 모드를 켜면 업로드된 데이터를 직접 수정할 수 있습니다. 변경 사항은 자동 저장됩니다. 잠금을 해제할까요?"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    setEditMode(!isEditMode);
+  };
 
   if (!selectedStudent) {
     return (
@@ -99,7 +118,18 @@ export function PreviewPanel() {
     <div className="rounded-lg shadow p-4 h-full flex flex-col" style={{ backgroundColor: 'var(--card)' }}>
       {/* 버튼 영역 */}
       {students.length > 0 && (
-        <div className="mb-4 pb-4 border-b flex justify-end gap-2" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-4 pb-4 border-b flex flex-wrap justify-end gap-2" style={{ borderColor: 'var(--border)' }}>
+          <button
+            onClick={handleToggleEditMode}
+            className="px-4 py-2 text-sm font-semibold rounded-lg border flex items-center gap-2 transition-colors"
+            style={{
+              borderColor: isEditMode ? 'var(--primary)' : 'var(--border)',
+              color: isEditMode ? 'var(--primary)' : 'var(--foreground)',
+            }}
+            aria-label="점수 편집 모드 전환"
+          >
+            {isEditMode ? "🔓 편집 중 (잠그기)" : "🔒 점수 잠금 해제"}
+          </button>
           <button
             onClick={() => useStore.getState().setPresenterMode(true)}
             className="group relative px-6 py-2.5 text-[var(--primary-foreground)] text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 overflow-hidden"
@@ -168,6 +198,11 @@ export function PreviewPanel() {
 
       <div className="flex-1 overflow-y-auto">
         <h3 className="text-base font-semibold mb-2">평가 결과</h3>
+        {isEditMode && (
+          <p className="text-xs mb-3" style={{ color: 'var(--muted-foreground)' }}>
+            편집 모드에서는 영역 이름, 점수, 만점을 직접 수정할 수 있습니다. 변경 사항은 자동 저장되며, 다시 잠그면 실수 입력을 방지할 수 있습니다.
+          </p>
+        )}
         {selectedStudent.evaluations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <svg
@@ -195,25 +230,98 @@ export function PreviewPanel() {
                 className="border rounded-lg p-3 hover:shadow-md transition-shadow"
                 style={{ borderColor: 'var(--border)' }}
               >
-                <div className="font-semibold text-sm mb-1">{eval_.area}</div>
-                <div className="text-xl font-bold mb-2" style={{ color: 'var(--primary)' }}>
-                  {eval_.score === null ? '미입력' : `${eval_.score} / ${eval_.maxScore}`}
-                </div>
-                {eval_.maxScore > 0 && eval_.score !== null && (
-                  <div>
-                    <div className="w-full rounded-full h-1.5 mb-1" style={{ backgroundColor: 'var(--secondary)' }}>
-                      <div
-                        className="h-1.5 rounded-full transition-all"
-                        style={{ 
-                          backgroundColor: 'var(--primary)',
-                          width: `${(eval_.score / eval_.maxScore) * 100}%`,
-                        }}
-                      />
+                {isEditMode ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={eval_.area}
+                      onChange={(event) =>
+                        updateEvaluation(selectedStudent.id, index, {
+                          area: event.target.value,
+                        })
+                      }
+                      className="w-full text-sm font-semibold border rounded px-2 py-1"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--card)' }}
+                      placeholder="평가 영역 이름"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                          점수
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min={0}
+                          value={eval_.score ?? ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === "") {
+                              updateEvaluation(selectedStudent.id, index, {
+                                score: null,
+                              });
+                              return;
+                            }
+                            const parsed = Number(value);
+                            if (Number.isFinite(parsed)) {
+                              updateEvaluation(selectedStudent.id, index, {
+                                score: parsed,
+                              });
+                            }
+                          }}
+                          className="w-full border rounded px-2 py-1"
+                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                          만점
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={eval_.maxScore}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === "") {
+                              return;
+                            }
+                            const parsed = Number(value);
+                            if (Number.isFinite(parsed) && parsed > 0) {
+                              updateEvaluation(selectedStudent.id, index, {
+                                maxScore: parsed,
+                              });
+                            }
+                          }}
+                          className="w-full border rounded px-2 py-1"
+                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                        />
+                      </div>
                     </div>
-                    <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                      {((eval_.score / eval_.maxScore) * 100).toFixed(1)}%
-                    </p>
                   </div>
+                ) : (
+                  <>
+                    <div className="font-semibold text-sm mb-1">{eval_.area}</div>
+                    <div className="text-xl font-bold mb-2" style={{ color: 'var(--primary)' }}>
+                      {eval_.score === null ? '미입력' : `${eval_.score} / ${eval_.maxScore}`}
+                    </div>
+                    {eval_.maxScore > 0 && eval_.score !== null && (
+                      <div>
+                        <div className="w-full rounded-full h-1.5 mb-1" style={{ backgroundColor: 'var(--secondary)' }}>
+                          <div
+                            className="h-1.5 rounded-full transition-all"
+                            style={{ 
+                              backgroundColor: 'var(--primary)',
+                              width: `${(eval_.score / eval_.maxScore) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                          {((eval_.score / eval_.maxScore) * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

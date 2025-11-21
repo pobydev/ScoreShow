@@ -103,13 +103,13 @@ export function StudentList({
             }}
           >
             {filteredStudents.map((student, idx) => {
-              let isInBlackout =
+              const isInBlackout =
                 isPresenterMode && typeof blackoutBetweenIdx === "number";
-              let isSelected =
+              const isSelected =
                 !isInBlackout && selectedStudentId === student.id;
               
               // 화이트아웃 시작 시 첫 번째 학생 위에 마커 표시
-              let items: JSX.Element[] = [];
+              const items: JSX.Element[] = [];
               if (
                 isPresenterMode &&
                 typeof blackoutBetweenIdx === "number" &&
