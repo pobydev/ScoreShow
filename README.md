@@ -22,7 +22,7 @@
 
 최신 버전은 [GitHub Releases](https://github.com/pobydev/ScoreShow/releases/latest)에서 다운로드할 수 있습니다.
 
-- Windows: `ScoreShow Setup 1.1.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow.Setup.1.1.0.exe))
+- Windows: `ScoreShow Setup 1.1.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v.1.1.0/ScoreShow%20Setup%201.1.0.exe))
 
 ## 📖 사용 가이드
 
@@ -116,7 +116,7 @@ pnpm run electron:pack
 
 빌드된 파일은 `release` 폴더에 생성됩니다:
 
-- Windows: `ScoreShow Setup 1.1.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow.Setup.1.1.0.exe))
+- Windows: `ScoreShow Setup 1.1.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v.1.1.0/ScoreShow%20Setup%201.1.0.exe))
 - Mac: `ScoreShow-1.1.0.dmg`
 - Linux: `ScoreShow-1.1.0.AppImage`
 
