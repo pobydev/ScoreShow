@@ -27,7 +27,7 @@
 ## 📦 다운로드
 
 - **ScoreShow Setup 1.1.0.exe** - 더블클릭으로 설치하고 바로 사용 가능합니다.  
-  [바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow.Setup.1.1.0.exe)
+  [바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow%20Setup%201.1.0.exe)
 
 # ScoreShow v1.0.1
 
