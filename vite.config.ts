@@ -11,8 +11,8 @@ function cspPlugin(): Plugin {
       // 프로덕션 빌드에서만 CSP를 엄격하게 변경
       if (ctx.bundle && !ctx.server) {
         return html.replace(
-          /connect-src 'self' ws:\/\/localhost:\* http:\/\/localhost:\*;/,
-          "connect-src 'none';"
+          /connect-src 'self' ws:\/\/localhost:\* http:\/\/localhost:\* https:\/\/raw\.githubusercontent\.com;/,
+          "connect-src 'self' https://raw.githubusercontent.com;"
         ).replace(
           /script-src 'self' 'unsafe-inline' 'unsafe-eval';/,
           "script-src 'self' 'unsafe-inline';"
