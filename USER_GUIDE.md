@@ -26,8 +26,8 @@
 
 1. **다운로드**
 
-   - GitHub Releases에서 `ScoreShow Setup 1.1.0.exe` 파일을 다운로드합니다.  
-     [바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v.1.1.0/ScoreShow.Setup.1.1.0.exe)
+   - GitHub Releases에서 `ScoreShow Setup 1.1.1.exe` 파일을 다운로드합니다.  
+     [바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v.1.1.1/ScoreShow.Setup.1.1.1.exe)
 
 2. **설치**
 
