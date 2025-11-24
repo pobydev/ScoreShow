@@ -129,7 +129,7 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
     return null;
   }
 
-  // 영역 컬럼 찾기: 영역1 이름, 영역1 만점, 영역2 이름, 영역2 만점, ...
+  // 영역 컬럼 찾기: 표준 템플릿 구조 (E2, G2, I2, K2, M2가 영역 이름)
   const areaColumns: Array<{
     areaIndex: number;
     nameCol: number; // 영역 이름이 있는 컬럼 (1행에서 읽음)
@@ -139,39 +139,52 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
     defaultMaxScore: number; // 2행에서 읽은 기본 만점
   }> = [];
 
-  for (let col = 0; col <= range.e.c; col++) {
-    const header = headerRow[col];
-    // "영역1 이름", "영역2 이름" 패턴 찾기
-    const areaNameMatch = normalizeHeaderLabel(header).match(/^영역(\d+)이름$/);
-    if (areaNameMatch) {
-      const index = parseInt(areaNameMatch[1], 10);
-      const maxScoreCol = col + 1; // 영역1 만점은 영역1 이름 다음 컬럼
-      
-      // 1행에서 영역 이름 읽기 (사용자가 수정한 실제 영역명)
-      let areaName = getRawCellValue(worksheet, 1, col).trim();
-      
-      // 영역 이름이 비어있거나 기본값인 경우 처리
-      if (!areaName || areaName === "영역1 이름" || areaName === "영역2 이름" || areaName === "영역3 이름" || areaName === "영역4 이름" || areaName === "영역5 이름") {
-        // 기본값으로 "영역1", "영역2" 등 사용
-        areaName = `영역${index}`;
-      }
-
-      // 2행에서 기본 만점 읽기
-      const defaultMaxScoreRaw = getRawCellValue(worksheet, 2, maxScoreCol).trim();
-      const defaultMaxScore = parseNumericCell(defaultMaxScoreRaw);
-      
-      // 만점이 없으면 기본값 100 사용
-      const finalMaxScore = defaultMaxScore && defaultMaxScore > 0 ? defaultMaxScore : 100;
-      
-      areaColumns.push({
-        areaIndex: index,
-        nameCol: col,
-        scoreCol: col, // 점수는 영역 이름 칸에 입력됨
-        maxScoreCol: maxScoreCol,
-        areaName: areaName,
-        defaultMaxScore: finalMaxScore,
-      });
+  // 표준 템플릿 구조: E(4), G(6), I(8), K(10), M(12) 컬럼이 영역 이름
+  // 각 영역 이름 다음 컬럼이 만점 컬럼
+  const areaNameCols = [4, 6, 8, 10, 12]; // E, G, I, K, M (0-based)
+  
+  for (let i = 0; i < areaNameCols.length; i++) {
+    const nameCol = areaNameCols[i];
+    const maxScoreCol = nameCol + 1; // 다음 컬럼이 만점
+    
+    // 컬럼 범위 확인
+    if (nameCol > range.e.c || maxScoreCol > range.e.c) {
+      break; // 더 이상 영역이 없음
     }
+    
+    // 1행(인덱스 1)에서 영역 이름 읽기 (사용자가 수정한 실제 영역명)
+    let areaName = getRawCellValue(worksheet, 1, nameCol).trim();
+    
+    // 1행에 기본값이거나 비어있으면 2행에서 읽기
+    if (!areaName || areaName.match(/^영역\d+\s*이름?$/)) {
+      areaName = getRawCellValue(worksheet, 2, nameCol).trim();
+    }
+    
+    // 여전히 기본값이거나 비어있으면 "영역N" 사용
+    if (!areaName || areaName.match(/^영역\d+\s*이름?$/)) {
+      areaName = `영역${i + 1}`;
+    }
+    
+    // 영역 이름이 비어있으면 해당 영역은 건너뛰기 (사용자가 입력하지 않은 영역)
+    if (!areaName) {
+      continue;
+    }
+
+    // 2행에서 기본 만점 읽기
+    const defaultMaxScoreRaw = getRawCellValue(worksheet, 2, maxScoreCol).trim();
+    const defaultMaxScore = parseNumericCell(defaultMaxScoreRaw);
+    
+    // 만점이 없으면 기본값 100 사용
+    const finalMaxScore = defaultMaxScore && defaultMaxScore > 0 ? defaultMaxScore : 100;
+    
+    areaColumns.push({
+      areaIndex: i + 1,
+      nameCol: nameCol,
+      scoreCol: nameCol, // 점수는 영역 이름 칸에 입력됨
+      maxScoreCol: maxScoreCol,
+      areaName: areaName,
+      defaultMaxScore: finalMaxScore,
+    });
   }
 
   if (areaColumns.length === 0) {
