@@ -240,9 +240,14 @@ export function PreviewPanel() {
                           area: event.target.value,
                         })
                       }
+                      onKeyDown={(e) => {
+                        // Electron에서 키보드 이벤트가 전파되지 않도록 방지
+                        e.stopPropagation();
+                      }}
                       className="w-full text-sm font-semibold border rounded px-2 py-1"
                       style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--card)' }}
                       placeholder="평가 영역 이름"
+                      autoComplete="off"
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
@@ -269,8 +274,13 @@ export function PreviewPanel() {
                               });
                             }
                           }}
+                          onKeyDown={(e) => {
+                            // Electron에서 키보드 이벤트가 전파되지 않도록 방지
+                            e.stopPropagation();
+                          }}
                           className="w-full border rounded px-2 py-1"
                           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                          autoComplete="off"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -293,8 +303,13 @@ export function PreviewPanel() {
                               });
                             }
                           }}
+                          onKeyDown={(e) => {
+                            // Electron에서 키보드 이벤트가 전파되지 않도록 방지
+                            e.stopPropagation();
+                          }}
                           className="w-full border rounded px-2 py-1"
                           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                          autoComplete="off"
                         />
                       </div>
                     </div>

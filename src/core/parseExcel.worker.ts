@@ -152,22 +152,29 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
       break; // 더 이상 영역이 없음
     }
     
-    // 1행(인덱스 1)에서 영역 이름 읽기 (사용자가 수정한 실제 영역명)
+    // 1행(인덱스 1) 헤더에서 영역 이름 읽기
+    // 표준 템플릿: 1행에 "영역1 이름", "영역2 이름" 등이 헤더로 있음
     let areaName = getRawCellValue(worksheet, 1, nameCol).trim();
     
-    // 1행에 기본값이거나 비어있으면 2행에서 읽기
+    // 1행이 비어있거나 기본값 패턴이면 2행에서 읽기 (사용자가 직접 입력한 경우)
     if (!areaName || areaName.match(/^영역\d+\s*이름?$/)) {
       areaName = getRawCellValue(worksheet, 2, nameCol).trim();
+      
+      // 2행에서 읽은 값이 숫자면 점수이므로 무시하고 기본값 사용
+      if (areaName && /^\d+\.?\d*$/.test(areaName)) {
+        areaName = `영역${i + 1}`;
+      }
+    } else {
+      // 1행에 "영역N 이름" 패턴이 있으면 "영역N"으로 변환
+      const defaultPatternMatch = areaName.match(/^영역(\d+)\s*이름?$/);
+      if (defaultPatternMatch) {
+        areaName = `영역${defaultPatternMatch[1]}`;
+      }
     }
     
-    // 여전히 기본값이거나 비어있으면 "영역N" 사용
-    if (!areaName || areaName.match(/^영역\d+\s*이름?$/)) {
-      areaName = `영역${i + 1}`;
-    }
-    
-    // 영역 이름이 비어있으면 해당 영역은 건너뛰기 (사용자가 입력하지 않은 영역)
+    // 여전히 비어있으면 "영역N" 사용
     if (!areaName) {
-      continue;
+      areaName = `영역${i + 1}`;
     }
 
     // 2행에서 기본 만점 읽기
