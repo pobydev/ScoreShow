@@ -2,7 +2,7 @@
  * 메인 앱 컴포넌트
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FilePicker } from "./components/FilePicker";
 import { StudentList } from "./components/StudentList";
 import { PreviewPanel } from "./components/PreviewPanel";
@@ -13,11 +13,20 @@ import logo from "./assets/logo.svg";
 
 function App() {
   const { error, isPresenterMode, isLoading, loadFromStorage } = useStore();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   // 앱 시작 시 저장된 데이터 불러오기
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
+
+  // Electron 환경에서 버전 정보 가져오기
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).electronAPI?.getVersion) {
+      const version = (window as any).electronAPI.getVersion();
+      setAppVersion(version);
+    }
+  }, []);
 
   // 오프라인 상태 표시
   useEffect(() => {
@@ -55,9 +64,16 @@ function App() {
                   style={{ marginLeft: '10px' }}
                 />
                 {/* 설명 텍스트 */}
-                <p className="text-lg font-medium text-ocean-700">
-                  교사용 수행평가 발표도구
-                </p>
+                <div className="flex flex-col">
+                  <p className="text-lg font-medium text-ocean-700">
+                    교사용 수행평가 발표도구
+                  </p>
+                  {appVersion && (
+                    <p className="text-xs text-ocean-500 mt-0.5">
+                      v{appVersion}
+                    </p>
+                  )}
+                </div>
               </div>
               {/* 파일 업로드 - 헤더에 통합 */}
               <div className="flex-shrink-0">
