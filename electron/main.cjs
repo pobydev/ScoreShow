@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -182,8 +182,67 @@ if (!gotTheLock) {
     }
   });
 
+  // 메뉴 생성 함수
+  function createMenu() {
+    const template = [
+      {
+        label: "도움말",
+        submenu: [
+          {
+            label: "ScoreShow 정보",
+            click: () => {
+              const version = app.getVersion();
+              dialog.showMessageBox(win, {
+                type: "info",
+                title: "ScoreShow 정보",
+                message: "ScoreShow",
+                detail: `버전: ${version}\n\n교사용 수행평가 점수 발표 도구\n\nMade with ❤️ by a teacher, for teachers`,
+                buttons: ["확인"],
+              });
+            },
+          },
+          { type: "separator" },
+          {
+            label: "GitHub 저장소",
+            click: () => {
+              require("electron").shell.openExternal("https://github.com/pobydev/ScoreShow");
+            },
+          },
+        ],
+      },
+    ];
+
+    // macOS에서는 첫 번째 메뉴가 앱 이름으로 표시됨
+    if (process.platform === "darwin") {
+      template.unshift({
+        label: app.getName(),
+        submenu: [
+          {
+            label: `${app.getName()} 정보`,
+            click: () => {
+              const version = app.getVersion();
+              dialog.showMessageBox(win, {
+                type: "info",
+                title: `${app.getName()} 정보`,
+                message: app.getName(),
+                detail: `버전: ${version}\n\n교사용 수행평가 점수 발표 도구\n\nMade with ❤️ by a teacher, for teachers`,
+                buttons: ["확인"],
+              });
+            },
+          },
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      });
+    }
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+  }
+
   // 앱이 준비되면 창 생성
   app.whenReady().then(() => {
+    createMenu();
     createWindow();
 
     // macOS: 모든 창이 닫혀도 앱이 계속 실행
