@@ -4,6 +4,15 @@
  */
 
 // fetch 오버라이드
+import { TEMPLATE_FILE_NAME } from "./template";
+
+function isAllowedTemplateUrl(url: string): boolean {
+  return (
+    url.startsWith("https://raw.githubusercontent.com/pobydev/ScoreShow/") &&
+    url.endsWith(`/public/${TEMPLATE_FILE_NAME}`)
+  );
+}
+
 const originalFetch = window.fetch;
 window.fetch = function (...args: Parameters<typeof fetch>) {
   // 로컬 리소스는 허용 (blob:, data: 등)
@@ -13,7 +22,7 @@ window.fetch = function (...args: Parameters<typeof fetch>) {
     url.startsWith("data:") ||
     url.startsWith("/") ||
     // 템플릿 파일 다운로드를 위한 GitHub raw URL 허용
-    url.includes("raw.githubusercontent.com/pobydev/ScoreShow/main/public/ScoreShow_Template.xlsx")
+    isAllowedTemplateUrl(url)
   ) {
     return originalFetch.apply(window, args);
   }

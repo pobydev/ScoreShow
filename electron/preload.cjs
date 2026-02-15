@@ -21,5 +21,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getTemplateFile: () => ipcRenderer.invoke("get-template-file"),
   downloadTemplate: () => ipcRenderer.invoke("download-template"),
   getVersion: () => getAppVersion(),
+  focusWindow: () => ipcRenderer.invoke("focus-window"),
 });
 

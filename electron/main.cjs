@@ -34,6 +34,8 @@ if (!gotTheLock) {
         enableRemoteModule: false,
         sandbox: false,
         preload: path.join(__dirname, "preload.cjs"),
+        // Electron에서 input 필드의 키보드 입력이 정상 작동하도록 설정
+        spellcheck: false,
       },
       icon: path.join(__dirname, "../public/pwa-192x192.png"),
       show: false, // 창이 준비될 때까지 숨김
@@ -63,19 +65,10 @@ if (!gotTheLock) {
       win.loadFile(path.join(__dirname, "../dist/index.html"));
     }
 
-    // 개발자 도구 단축키 (프로덕션 모드에서도 사용 가능)
-    win.webContents.on('before-input-event', (event, input) => {
-      // F12 또는 Ctrl+Shift+I (Windows/Linux) 또는 Cmd+Option+I (Mac)
-      if (input.key === 'F12' || 
-          (input.control && input.shift && input.key === 'I') ||
-          (input.meta && input.alt && input.key === 'I')) {
-        if (win.webContents.isDevToolsOpened()) {
-          win.webContents.closeDevTools();
-        } else {
-          win.webContents.openDevTools();
-        }
-      }
-    });
+    // before-input-event 핸들러 제거
+    // 이 핸들러가 모든 키보드 입력을 가로채서 input 필드의 정상 작동을 방해함
+    // 개발자 도구는 F12 키를 누르면 기본적으로 열리므로 별도 핸들러 불필요
+    // 또는 메뉴에서 "도움말" > "개발자 도구"로 열 수 있음
 
     // 창이 준비되면 표시
     win.once("ready-to-show", () => {
@@ -182,6 +175,25 @@ if (!gotTheLock) {
     }
   });
 
+  // IPC 핸들러: Electron 창에 포커스 주기
+  ipcMain.handle("focus-window", async () => {
+    try {
+      if (win) {
+        if (win.isMinimized()) {
+          win.restore();
+        }
+        win.focus();
+        // webContents에도 포커스 주기
+        win.webContents.focus();
+        return { success: true };
+      }
+      return { success: false, error: "Window not found" };
+    } catch (error) {
+      console.error("[Electron] Focus window failed:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // 메뉴 생성 함수
   function createMenu() {
     const template = [
@@ -199,6 +211,18 @@ if (!gotTheLock) {
                 detail: `버전: ${version}\n\n교사용 수행평가 점수 발표 도구\n\nMade with ❤️ by a teacher, for teachers`,
                 buttons: ["확인"],
               });
+            },
+          },
+          { type: "separator" },
+          {
+            label: "개발자 도구",
+            accelerator: "F12",
+            click: () => {
+              if (win.webContents.isDevToolsOpened()) {
+                win.webContents.closeDevTools();
+              } else {
+                win.webContents.openDevTools();
+              }
             },
           },
           { type: "separator" },

@@ -22,8 +22,8 @@ function App() {
 
   // Electron 환경에서 버전 정보 가져오기
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).electronAPI?.getVersion) {
-      const version = (window as any).electronAPI.getVersion();
+    if (typeof window !== "undefined" && window.electronAPI?.getVersion) {
+      const version = window.electronAPI.getVersion();
       setAppVersion(version);
     }
   }, []);
