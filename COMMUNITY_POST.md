@@ -55,7 +55,7 @@ GitHub Releases에서 다운로드하세요:
 https://github.com/pobydev/ScoreShow/releases/latest
 
 바로 다운로드 (Windows):
-https://github.com/pobydev/ScoreShow/releases/download/v.1.1.0/ScoreShow.Setup.1.1.0.exe
+https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow%20Setup%201.1.0.exe
 
 📖 사용 방법
 자세한 사용 가이드는 GitHub 저장소에 있습니다:
@@ -95,7 +95,7 @@ https://github.com/pobydev/ScoreShow
 - 100% 오프라인 (개인정보 보호)
 
 다운로드: https://github.com/pobydev/ScoreShow/releases/latest
-바로 다운로드: https://github.com/pobydev/ScoreShow/releases/download/v.1.1.0/ScoreShow.Setup.1.1.0.exe
+바로 다운로드: https://github.com/pobydev/ScoreShow/releases/download/v1.1.0/ScoreShow%20Setup%201.1.0.exe
 사용 가이드: https://github.com/pobydev/ScoreShow
 
 도움이 되셨다면 좋겠습니다!

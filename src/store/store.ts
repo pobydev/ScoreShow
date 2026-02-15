@@ -4,7 +4,7 @@
 
 import { create } from "zustand";
 import type { Student, AppState, ColumnMapping, Evaluation } from "../types";
-import { loadStudents, saveStudents, clearStorage } from "../core/storage";
+import { loadStudents, saveStudents, clearStorage } from "../core/storage-secure";
 
 interface AppStore extends AppState {
   // Actions

@@ -2,6 +2,7 @@
  * 학생 정보 미리보기 패널
  */
 
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../store/store";
 
 export function PreviewPanel() {
@@ -15,17 +16,38 @@ export function PreviewPanel() {
   } = useStore();
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // 편집 모드 활성화 시 첫 번째 input 필드에 포커스를 주기 위한 ref
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  
+  // 편집 모드가 활성화되면 첫 번째 input 필드에 포커스
+  useEffect(() => {
+    if (isEditMode && selectedStudent && selectedStudent.evaluations.length > 0) {
+      // 약간의 지연 후 포커스
+      setTimeout(() => {
+        if (firstInputRef.current) {
+          firstInputRef.current.focus();
+        }
+      }, 50);
+    }
+  }, [isEditMode, selectedStudent]);
 
   const handleToggleEditMode = () => {
     if (!isEditMode) {
-      const confirmed = confirm(
-        "점수 수정 모드를 켜면 업로드된 데이터를 직접 수정할 수 있습니다. 변경 사항은 자동 저장됩니다. 잠금을 해제할까요?"
-      );
-      if (!confirmed) {
-        return;
-      }
+      setShowConfirmDialog(true);
+    } else {
+      setEditMode(false);
     }
-    setEditMode(!isEditMode);
+  };
+
+  const confirmEditMode = () => {
+    setShowConfirmDialog(false);
+    setEditMode(true);
+  };
+
+  const cancelEditMode = () => {
+    setShowConfirmDialog(false);
   };
 
   if (!selectedStudent) {
@@ -233,21 +255,64 @@ export function PreviewPanel() {
                 {isEditMode ? (
                   <div className="space-y-2">
                     <input
+                      ref={index === 0 ? firstInputRef : undefined}
                       type="text"
                       value={eval_.area}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        event.stopPropagation();
                         updateEvaluation(selectedStudent.id, index, {
                           area: event.target.value,
-                        })
-                      }
+                        });
+                      }}
+                      onMouseDown={(e) => {
+                        // Electron에서 클릭 시 포커스를 강제로 주기
+                        e.stopPropagation();
+                        (e.currentTarget as HTMLInputElement).focus();
+                      }}
+                      onClick={(e) => {
+                        // Electron에서 클릭 시 포커스를 강제로 주기
+                        e.stopPropagation();
+                        (e.currentTarget as HTMLInputElement).focus();
+                      }}
                       onKeyDown={(e) => {
                         // Electron에서 키보드 이벤트가 전파되지 않도록 방지
                         e.stopPropagation();
+                        if (e.nativeEvent) {
+                          e.nativeEvent.stopImmediatePropagation();
+                        }
+                      }}
+                      onKeyPress={(e) => {
+                        e.stopPropagation();
+                        if (e.nativeEvent) {
+                          e.nativeEvent.stopImmediatePropagation();
+                        }
+                      }}
+                      onKeyUp={(e) => {
+                        e.stopPropagation();
+                        if (e.nativeEvent) {
+                          e.nativeEvent.stopImmediatePropagation();
+                        }
+                      }}
+                      onFocus={(e) => {
+                        // Electron에서 포커스 시 이벤트 전파 방지
+                        e.stopPropagation();
+                      }}
+                      onInput={(e) => {
+                        e.stopPropagation();
                       }}
                       className="w-full text-sm font-semibold border rounded px-2 py-1"
-                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--card)' }}
+                      style={{ 
+                        borderColor: 'var(--border)', 
+                        color: 'var(--foreground)', 
+                        backgroundColor: 'var(--card)',
+                        pointerEvents: 'auto',
+                        zIndex: 1,
+                      }}
                       placeholder="평가 영역 이름"
                       autoComplete="off"
+                      tabIndex={0}
+                      autoFocus={false}
+                      readOnly={false}
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
@@ -260,6 +325,7 @@ export function PreviewPanel() {
                           min={0}
                           value={eval_.score ?? ""}
                           onChange={(event) => {
+                            event.stopPropagation();
                             const value = event.target.value;
                             if (value === "") {
                               updateEvaluation(selectedStudent.id, index, {
@@ -274,13 +340,53 @@ export function PreviewPanel() {
                               });
                             }
                           }}
+                          onMouseDown={(e) => {
+                            // Electron에서 클릭 시 포커스를 강제로 주기
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLInputElement).focus();
+                          }}
+                          onClick={(e) => {
+                            // Electron에서 클릭 시 포커스를 강제로 주기
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLInputElement).focus();
+                          }}
                           onKeyDown={(e) => {
                             // Electron에서 키보드 이벤트가 전파되지 않도록 방지
                             e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onKeyPress={(e) => {
+                            e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onKeyUp={(e) => {
+                            e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onFocus={(e) => {
+                            // Electron에서 포커스 시 이벤트 전파 방지
+                            e.stopPropagation();
+                          }}
+                          onInput={(e) => {
+                            e.stopPropagation();
                           }}
                           className="w-full border rounded px-2 py-1"
-                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                          style={{ 
+                            borderColor: 'var(--border)', 
+                            backgroundColor: 'var(--card)',
+                            pointerEvents: 'auto',
+                            zIndex: 1,
+                          }}
                           autoComplete="off"
+                          tabIndex={0}
+                          autoFocus={false}
+                          readOnly={false}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -292,6 +398,7 @@ export function PreviewPanel() {
                           min={1}
                           value={eval_.maxScore}
                           onChange={(event) => {
+                            event.stopPropagation();
                             const value = event.target.value;
                             if (value === "") {
                               return;
@@ -303,13 +410,53 @@ export function PreviewPanel() {
                               });
                             }
                           }}
+                          onMouseDown={(e) => {
+                            // Electron에서 클릭 시 포커스를 강제로 주기
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLInputElement).focus();
+                          }}
+                          onClick={(e) => {
+                            // Electron에서 클릭 시 포커스를 강제로 주기
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLInputElement).focus();
+                          }}
                           onKeyDown={(e) => {
                             // Electron에서 키보드 이벤트가 전파되지 않도록 방지
                             e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onKeyPress={(e) => {
+                            e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onKeyUp={(e) => {
+                            e.stopPropagation();
+                            if (e.nativeEvent) {
+                              e.nativeEvent.stopImmediatePropagation();
+                            }
+                          }}
+                          onFocus={(e) => {
+                            // Electron에서 포커스 시 이벤트 전파 방지
+                            e.stopPropagation();
+                          }}
+                          onInput={(e) => {
+                            e.stopPropagation();
                           }}
                           className="w-full border rounded px-2 py-1"
-                          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)' }}
+                          style={{ 
+                            borderColor: 'var(--border)', 
+                            backgroundColor: 'var(--card)',
+                            pointerEvents: 'auto',
+                            zIndex: 1,
+                          }}
                           autoComplete="off"
+                          tabIndex={0}
+                          autoFocus={false}
+                          readOnly={false}
                         />
                       </div>
                     </div>
@@ -343,6 +490,38 @@ export function PreviewPanel() {
           </div>
         )}
       </div>
+
+      {/* 확인 다이얼로그 */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelEditMode}>
+          <div 
+            className="rounded-lg p-6 shadow-xl max-w-md w-full mx-4" 
+            style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderWidth: '1px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>점수 잠금 해제</h3>
+            <p className="mb-6 text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              점수 수정 모드를 켜면 업로드된 데이터를 직접 수정할 수 있습니다. 변경 사항은 자동 저장됩니다. 잠금을 해제할까요?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelEditMode}
+                className="px-4 py-2 text-sm font-medium rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                style={{ color: 'var(--muted-foreground)' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmEditMode}
+                className="px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: 'var(--primary)' }}
+              >
+                해제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
