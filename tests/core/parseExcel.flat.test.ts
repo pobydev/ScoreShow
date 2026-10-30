@@ -41,9 +41,13 @@ describe("일반 표와 컬럼 자동 매핑", () => {
     const students = await parseRows([
       ["반/번호", "성명", "평가영역", "점수", "만점"],
       ["1/1", "김가상", "독서", "", 10],
+      ["1/2", "이가상", "독서", 7, 10],
       ["담당교사", "가상선생", "", "", ""],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 독서:null/10"]);
+    expect(summarize(students)).toEqual([
+      "1-1-1 김가상 | 독서:null/10",
+      "1-1-2 이가상 | 독서:7/10",
+    ]);
   });
 
   it("이름의 공백과 전각 문자를 정리한다", async () => {
@@ -91,8 +95,54 @@ describe("호출자가 준 매핑", () => {
   });
 });
 
+describe("양식을 확인하지 못한 파일", () => {
+  it("학생은 찾았는데 점수가 하나도 없으면 조용히 미입력으로 두지 않고 실패로 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["반/번호", "성명", "관찰 내용"],
+        ["1/1", "김가상", "성실함"],
+      ])
+    );
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining("점수를 찾지 못했습니다"),
+    });
+  });
+
+  it("만점을 찾지 못한 영역을 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["반/번호", "성명", "문법", "토론 (만점 20)"],
+        ["1/1", "김가상", 8, 9],
+      ])
+    );
+    expect(result).toMatchObject({ success: true, areasWithoutMax: ["문법"] });
+  });
+
+  it("단일 영역에서 만점을 찾지 못하면 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["영역 : 듣기"],
+        ["반/번호", "성명", "점수"],
+        ["1/1", "김가상", 8],
+      ])
+    );
+    expect(result).toMatchObject({ success: true, areasWithoutMax: ["듣기"] });
+  });
+
+  it("만점이 모두 있으면 알리지 않는다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["반/번호", "성명", "문법 (만점 10)"],
+        ["1/1", "김가상", 8],
+      ])
+    );
+    expect(result).toMatchObject({ success: true, areasWithoutMax: [] });
+  });
+});
+
 describe("일반 표의 이상 동작", () => {
-  it("[Q-07] 행마다 다른 영역이 있어도 영역 하나로 합쳐져 나머지 점수를 잃는다", async () => {
+  it("[Q-07] 행마다 다른 영역이 있으면 영역별 점수를 모두 읽는다", async () => {
     const students = await parseRows([
       FLAT_HEADER,
       [2, "1/1", "김가상", "독서", 8, 10],
@@ -101,12 +151,12 @@ describe("일반 표의 이상 동작", () => {
       [2, "1/2", "이가상", "토론", 6, 10],
     ]);
     expect(summarize(students)).toEqual([
-      "2-1-1 김가상 | 토론:9/10",
-      "2-1-2 이가상 | 토론:6/10",
+      "2-1-1 김가상 | 독서:8/10 토론:9/10",
+      "2-1-2 이가상 | 독서:7/10 토론:6/10",
     ]);
   });
 
-  it("[Q-07] 영역 값이 듣기, 말하기여도 점수와 학년을 읽지만 영역은 하나로 합쳐진다", async () => {
+  it("[Q-07] 영역 값이 듣기, 말하기여도 영역별 점수와 학년을 읽는다", async () => {
     const students = await parseRows([
       FLAT_HEADER,
       [2, "1/1", "김가상", "듣기", 8, 10],
@@ -114,16 +164,17 @@ describe("일반 표의 이상 동작", () => {
       [2, "1/2", "이가상", "듣기", 7, 10],
     ]);
     expect(summarize(students)).toEqual([
-      "2-1-1 김가상 | 듣기:9/10",
+      "2-1-1 김가상 | 듣기:8/10 말하기:9/10",
       "2-1-2 이가상 | 듣기:7/10",
     ]);
   });
 
-  it("[Q-08] 반과 번호가 따로 있는 표는 학생을 찾지 못해 실패로 알린다", async () => {
+  it("[Q-08] 반과 번호가 따로 있는 표는 실패로 알리고 표준 서식을 안내한다", async () => {
     const rows: Rows = [SEPARATE_HEADER];
     for (let i = 1; i <= 20; i++) rows.push([2, 1, i, "김가상", "독서", 8, 10]);
     const result = await runWorker(toWorkbookBytes(rows));
     expect(result).toMatchObject(NO_STUDENTS_FOUND);
+    expect(result).toMatchObject({ error: expect.stringContaining("표준 서식에 붙여 넣어") });
   });
 
   it("[Q-09] 반/번호 헤더가 없어도 1/1 꼴 칸이 처음 나오는 행부터 읽는다", async () => {
@@ -177,11 +228,11 @@ describe("일반 표의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-28] 영어 헤더 표는 학생은 읽지만 score 칸을 찾지 못해 점수가 null이다", async () => {
+  it("[Q-28] 영어 헤더 표의 score 칸을 읽는다", async () => {
     const students = await parseRows([
       ["grade", "class", "name", "score"],
       [2, "1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 평가:null/100"]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 평가:8/100"]);
   });
 });

@@ -15,6 +15,7 @@ export type WorkerResult =
       mapping: ColumnMapping | null;
       headerRows?: string[][];
       scoreIssues?: ScoreIssue[];
+      areasWithoutMax?: string[];
     }
   | { success: false; error: string };
 

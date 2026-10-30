@@ -121,8 +121,12 @@ describe("나이스 단일 영역", () => {
       META,
       TABLE_HEADER,
       ["1/1", "김가상", 9, "전출"],
+      ["1/2", "이가상", 7, ""],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:null/10"]);
+    expect(summarize(students)).toEqual([
+      "1-1-1 김가상 | 듣기:null/10",
+      "1-1-2 이가상 | 듣기:7/10",
+    ]);
   });
 
   it("표 아래 바닥글을 버리고 이름이 빈 학생은 반/번호로 보여 준다", async () => {
@@ -297,21 +301,21 @@ describe("나이스 단일 영역의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-26] 영역 이름이 첫 공백에서 잘린다", async () => {
+  it("[Q-26] 영역 이름이 공백에서 잘리지 않는다", async () => {
     const students = await parseRows([
       ["영역 : 2차 서술형 평가", "영역만점 : 10"],
       ["반/번호", "성명", "점수"],
       ["1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 2차:8/10"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 2차 서술형 평가:8/10"]);
   });
 
-  it("[Q-26] 영어 영역 이름은 인식하지 못해 평가가 되고 만점도 100으로 둔다", async () => {
+  it("[Q-26] 영어 영역 이름과 만점도 읽는다", async () => {
     const students = await parseRows([
       ["영역 : Speaking", "영역만점 : 10"],
       ["반/번호", "성명", "점수"],
       ["1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 평가:8/100"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | Speaking:8/10"]);
   });
 });

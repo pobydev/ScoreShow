@@ -7,7 +7,7 @@ import { useStore } from "../store/store";
 import type { ColumnMapping } from "../types";
 import type { ScoreIssue } from "../core/normalize";
 import { TEMPLATE_DOWNLOAD_URLS, TEMPLATE_FILE_NAME } from "../core/template";
-import { loadedMessage } from "./app/loadMessages";
+import { loadedMessage, uploadRejection } from "./app/loadMessages";
 
 export function FilePicker() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,17 +36,10 @@ export function FilePicker() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const validTypes = [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/vnd.ms-excel",
-      "text/csv",
-    ];
-
-    if (
-      !validTypes.includes(file.type) &&
-      !file.name.match(/\.(xlsx|xls|csv)$/i)
-    ) {
-      setError("Unsupported format: .xlsx, .xls, .csv");
+    const rejection = uploadRejection(file);
+    if (rejection) {
+      setError(rejection);
+      event.target.value = "";
       return;
     }
 
@@ -63,20 +56,28 @@ export function FilePicker() {
       worker.postMessage({ file });
 
       worker.onmessage = async (e) => {
-        const { success, students, mapping, error, scoreIssues = [] } = e.data as {
+        const {
+          success,
+          students,
+          mapping,
+          error,
+          scoreIssues = [],
+          areasWithoutMax = [],
+        } = e.data as {
           success: boolean;
           students: Parameters<typeof setStudents>[0];
           mapping: ColumnMapping | null;
           error?: string;
           scoreIssues?: ScoreIssue[];
+          areasWithoutMax?: string[];
         };
 
         if (success) {
           await setStudents(students);
           setMapping(mapping ?? null);
-          if (scoreIssues.length > 0) {
-            // 교사가 학생 번호를 읽고 찾아볼 수 있도록 오래 보여 줍니다.
-            setError(loadedMessage(students.length, scoreIssues), 15000);
+          if (scoreIssues.length > 0 || areasWithoutMax.length > 0) {
+            // 교사가 학생 번호와 영역을 읽고 찾아볼 수 있도록 오래 보여 줍니다.
+            setError(loadedMessage(students.length, scoreIssues, areasWithoutMax), 15000);
           } else {
             setError(loadedMessage(students.length));
             setTimeout(() => {
@@ -154,7 +155,7 @@ export function FilePicker() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls"
           onChange={handleFileSelect}
           disabled={isProcessing}
           className={`text-small text-soft file:mr-3 file:py-2 file:px-4 file:rounded-button file:text-small file:font-semibold file:cursor-pointer file:transition-colors disabled:opacity-50 ${

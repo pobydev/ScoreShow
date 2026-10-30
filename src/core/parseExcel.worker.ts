@@ -17,6 +17,7 @@ interface AreaColumnInfo {
   col: number; // 컬럼 인덱스
   areaName: string; // 영역명 (예: "쓰기1", "말하기", "듣기")
   maxScore: number; // 만점
+  maxScoreMissing: boolean; // 만점을 못 찾아 100으로 둔 경우
 }
 
 // 결시 관련 낱말
@@ -116,7 +117,7 @@ function parseNumericCell(value: string): number | null {
 }
 
 /**
- * 헤더 칸의 만점을 찾습니다. 같은 칸을 먼저 보고, 없으면 아래 두 행까지 봅니다. 못 찾으면 100입니다.
+ * 헤더 칸의 만점을 찾습니다. 같은 칸을 먼저 보고, 없으면 아래 두 행까지 봅니다. 못 찾으면 null입니다.
  */
 function findAreaMaxScore(
   worksheet: XLSX.WorkSheet,
@@ -124,7 +125,7 @@ function findAreaMaxScore(
   headerRow: number,
   col: number,
   headerRowCount: number
-): number {
+): number | null {
   const sameCell = label.match(/만점\s*[:：]?\s*(\d+\.?\d*)/i);
   if (sameCell) return parseFloat(sameCell[1]);
 
@@ -135,10 +136,10 @@ function findAreaMaxScore(
       /만점\s*[:：]?\s*(\d+\.?\d*)/
     );
     if (nextMatch) {
-      return parseFloat(nextMatch[1]) || 100;
+      return parseFloat(nextMatch[1]) || null;
     }
   }
-  return 100;
+  return null;
 }
 
 /**
@@ -208,10 +209,12 @@ function findAreaColumnsByStructure(
     const count = (nameCounts.get(baseName) ?? 0) + 1;
     nameCounts.set(baseName, count);
 
+    const maxScore = findAreaMaxScore(worksheet, label, headerRow, col, headerRowCount);
     columns.push({
       col,
       areaName: count > 1 ? `${baseName}(${count})` : baseName,
-      maxScore: findAreaMaxScore(worksheet, label, headerRow, col, headerRowCount),
+      maxScore: maxScore ?? 100,
+      maxScoreMissing: maxScore === null,
     });
   }
 
@@ -235,7 +238,7 @@ function isTemplateSampleRow(worksheet: XLSX.WorkSheet, row: number): boolean {
 
 function parseStandardTemplate(
   worksheet: XLSX.WorkSheet
-): { students: Student[]; scoreIssues: ScoreIssue[] } | null {
+): { students: Student[]; scoreIssues: ScoreIssue[]; areasWithoutMax: string[] } | null {
   const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
   if (range.e.r < 2) {
     // 최소 0행(설명), 1행(헤더), 2행(첫 학생) 필요
@@ -273,6 +276,7 @@ function parseStandardTemplate(
     maxScoreCol: number; // 만점이 있는 컬럼
     areaName: string; // 1행에서 읽은 영역 이름
     defaultMaxScore: number; // 2행에서 읽은 기본 만점
+    maxScoreMissing: boolean; // 2행에 만점이 없어 100을 쓰는 경우
   }> = [];
 
   // 표준 템플릿 구조: E(4), G(6), I(8), K(10), M(12) 컬럼이 영역 이름
@@ -310,6 +314,7 @@ function parseStandardTemplate(
       maxScoreCol: maxScoreCol,
       areaName: areaName,
       defaultMaxScore: finalMaxScore,
+      maxScoreMissing: !(defaultMaxScore && defaultMaxScore > 0),
     });
   }
 
@@ -407,7 +412,13 @@ function parseStandardTemplate(
     return a.number - b.number;
   });
 
-  return { students, scoreIssues };
+  return {
+    students,
+    scoreIssues,
+    areasWithoutMax: usedAreaColumns
+      .filter((areaCol) => areaCol.maxScoreMissing)
+      .map((areaCol) => areaCol.areaName),
+  };
 }
 
 self.onmessage = async function (
@@ -516,6 +527,7 @@ self.onmessage = async function (
         success: true,
         students: template.students,
         scoreIssues: template.scoreIssues,
+        areasWithoutMax: template.areasWithoutMax,
         mapping: null,
       });
       return;
@@ -615,7 +627,10 @@ self.onmessage = async function (
         const cellValue = rowData[col] || "";
         // "영역 : 쓰기1" 또는 "영역: 쓰기1 (서·논술형)" 패턴 찾기
         // 숫자와 괄호 내용도 포함하여 매칭
-        const areaMatch = cellValue.match(/영역\s*[:：]\s*([가-힣\d]+(?:\s*\([^)]*\))?)/i);
+        // 이름 안의 공백은 살리되 두 칸 이상의 공백이나 만점 표기에서 끊습니다.
+        const areaMatch = cellValue.match(
+          /영역\s*[:：]\s*(\S.*?)(?:\s{2,}|\s*(?:영역)?만점\s*[:：]|$)/s
+        );
         if (areaMatch) {
           // 괄호 내용 제거 (예: "쓰기1 (서·논술형)" -> "쓰기1")
           extractedAreaName = areaMatch[1].replace(/\s*\([^)]*\)/g, "").trim();
@@ -758,7 +773,8 @@ self.onmessage = async function (
             // 평가 영역 키워드가 포함되어 있는지 확인 (이미 확인했지만 재확인)
             if (/(?:쓰기|말하기|듣기|읽기)/i.test(areaName)) {
               // 만점 정보 찾기 (같은 셀 또는 인접 셀, 못 찾으면 100)
-              maxScore = findAreaMaxScore(worksheet, trimmed, row, col, headerRows.length);
+              const foundMaxScore = findAreaMaxScore(worksheet, trimmed, row, col, headerRows.length);
+              maxScore = foundMaxScore ?? 100;
 
               // 병합된 셀인지 확인: 병합의 첫 번째 컬럼 인덱스 사용
               let actualCol = col;
@@ -783,7 +799,12 @@ self.onmessage = async function (
               // 이미 같은 컬럼(병합된 경우 첫 번째 컬럼)이 있는지 확인
               const existing = areaColumns.find((a) => a.col === actualCol);
               if (!existing && areaName) {
-                areaColumns.push({ col: actualCol, areaName, maxScore });
+                areaColumns.push({
+                  col: actualCol,
+                  areaName,
+                  maxScore,
+                  maxScoreMissing: foundMaxScore === null,
+                });
                 if (import.meta.env.DEV) {
                   console.log(
                     `[Parser] Found evaluation area column ${actualCol}: "${areaName}" (maxScore: ${maxScore})`
@@ -1359,6 +1380,14 @@ self.onmessage = async function (
       }
     }
 
+    // "평가영역" 같은 제목이 있는 칸이면 행마다 영역이 있는 세로형 표입니다.
+    const hasAreaPerRow =
+      !extractedAreaFromHeader &&
+      mapping.area !== undefined &&
+      headerRows.some((cells) =>
+        /^(평가영역|영역|과제명|항목|area)$/i.test(normalizeHeaderLabel(cells[mapping.area!] || ""))
+      );
+
     const parsedRows: ParsedRow[] = [];
 
     for (let row = dataStartRow; row <= range.e.r; row++) {
@@ -1531,8 +1560,10 @@ self.onmessage = async function (
         parsed.name = getValueFromMappedColumn(mapping.name);
       }
 
-      // 평가 영역: 헤더에서 추출한 값 우선 사용
-      if (extractedAreaName) {
+      // 평가 영역: 행마다 영역이 있는 표는 그 행의 값, 아니면 헤더에서 추출한 값 우선 사용
+      if (hasAreaPerRow && getValueFromMappedColumn(mapping.area)) {
+        parsed.area = getValueFromMappedColumn(mapping.area);
+      } else if (extractedAreaName) {
         parsed.area = extractedAreaName;
       } else if (mapping.area !== undefined) {
         parsed.area = getValueFromMappedColumn(mapping.area);
@@ -1768,16 +1799,38 @@ self.onmessage = async function (
       self.postMessage({
         success: false,
         error:
-          "파일에서 학생을 찾지 못했습니다. 파일 양식을 확인해 주세요. 기존 데이터는 그대로 유지됩니다.",
+          "파일에서 학생을 찾지 못했습니다. 나이스 파일이 아니면 표준 서식에 붙여 넣어 주세요. 기존 데이터는 그대로 유지됩니다.",
       });
       return;
     }
+
+    // 학생은 찾았는데 점수가 하나도 없으면 양식을 잘못 이해했을 수 있으므로 실패로 알립니다.
+    const hasAnyScore = students.some((student) =>
+      student.evaluations.some((evaluation) => evaluation.score !== null)
+    );
+    if (!hasAnyScore && scoreIssues.length === 0) {
+      self.postMessage({
+        success: false,
+        error:
+          "파일에서 점수를 찾지 못했습니다. 나이스 파일이 아니면 표준 서식에 붙여 넣어 주세요. 기존 데이터는 그대로 유지됩니다.",
+      });
+      return;
+    }
+
+    // 만점을 찾지 못해 100으로 둔 영역을 알립니다. 나이스 파일에는 만점이 항상 있습니다.
+    const areasWithoutMax =
+      areaColumns.length > 0
+        ? areaColumns.filter((area) => area.maxScoreMissing).map((area) => area.areaName)
+        : extractedMaxScore === null && mapping.maxScore === undefined
+          ? [...new Set(students.flatMap((s) => s.evaluations.map((e) => e.area)))]
+          : [];
 
     // 결과 전송
     self.postMessage({
       success: true,
       students,
       scoreIssues,
+      areasWithoutMax,
       mapping,
       headerRows,
     });

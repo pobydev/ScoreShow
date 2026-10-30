@@ -60,9 +60,13 @@ describe("표준 템플릿", () => {
     expect(summarize(students)[1]).toBe("2-1-2 이가상 | 쓰기1:3/10 말하기:4/10");
   });
 
-  it("2행에도 만점이 없으면 100이다", async () => {
-    const students = await parseTemplate([[2, 1, 1, "김가상", 9, "", 8, ""]], NAMED_HEADER);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:9/100 말하기:8/100"]);
+  it("2행에도 만점이 없으면 100으로 두고 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes(templateRows([[2, 1, 1, "김가상", 9, "", 8, 20]], NAMED_HEADER))
+    );
+    expect(result).toMatchObject({ success: true, areasWithoutMax: ["쓰기1"] });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual(["2-1-1 김가상 | 쓰기1:9/100 말하기:8/20"]);
   });
 
   it("학년, 반, 번호 순으로 정렬한다", async () => {

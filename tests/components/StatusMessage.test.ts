@@ -1,11 +1,34 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { loadedMessage } from "../../src/components/app/loadMessages";
+import { loadedMessage, uploadRejection } from "../../src/components/app/loadMessages";
 import { StatusMessage } from "../../src/components/app/StatusMessage";
 
 const render = (message: string) =>
   renderToStaticMarkup(createElement(StatusMessage, { message }));
+
+describe("uploadRejection", () => {
+  it.each([
+    ["scores.csv", "text/csv"],
+    ["scores.CSV", ""],
+    // 엑셀이 깔린 윈도우는 csv의 형식을 엑셀로 알려 줍니다.
+    ["scores.csv", "application/vnd.ms-excel"],
+  ])("[Q-10] %s(%s)는 엑셀로 저장하라고 안내한다", (name, type) => {
+    expect(uploadRejection({ name, type })).toBe("CSV는 읽지 않습니다. 엑셀 파일로 저장해 주세요.");
+  });
+
+  it.each([
+    ["scores.xlsx", ""],
+    ["scores.xls", ""],
+    ["download", "application/vnd.ms-excel"],
+  ])("%s(%s)는 받는다", (name, type) => {
+    expect(uploadRejection({ name, type })).toBeNull();
+  });
+
+  it("그 밖의 파일은 지원하는 형식을 알려 준다", () => {
+    expect(uploadRejection({ name: "memo.txt", type: "text/plain" })).toContain(".xlsx, .xls");
+  });
+});
 
 describe("StatusMessage", () => {
   it("[C-02] 학생을 불러온 메시지는 빨간색이 아니라 성공 색이다", () => {
@@ -37,6 +60,12 @@ describe("StatusMessage", () => {
   it("[Q-25] 학생이 많으면 앞의 10명만 적고 나머지는 수로 줄인다", () => {
     const issues = Array.from({ length: 12 }, (_, i) => ({ class: 1, number: i + 1 }));
     expect(loadedMessage(30, issues)).toContain("10번 외 2명");
+  });
+
+  it("만점을 찾지 못한 영역을 함께 알린다", () => {
+    expect(loadedMessage(30, [], ["토론", "실험"])).toContain(
+      "만점을 찾지 못해 100점으로 둔 영역: 토론, 실험"
+    );
   });
 
   it("실패 메시지는 빨간색이다", () => {

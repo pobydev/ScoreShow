@@ -2,13 +2,11 @@ import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
 import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import {
-  FLAT_HEADER,
   NICE_MULTI_MERGES,
   NICE_MULTI_ROWS,
   NICE_SINGLE_MERGES,
   NICE_SINGLE_ROWS,
   templateRows,
-  toCsvBytes,
   toWorkbookBytes,
 } from "../fixtures/workbooks";
 
@@ -49,47 +47,6 @@ describe.each(["xlsx", "xls"] as const)("%s", (format) => {
       toWorkbookBytes(NICE_SINGLE_ROWS, { merges: NICE_SINGLE_MERGES, format })
     );
     expect(summarize(students)).toEqual(NICE_SINGLE_RESULT);
-  });
-});
-
-describe("csv", () => {
-  it("BOM이 있는 UTF-8 표준 템플릿을 읽는다", async () => {
-    const students = await parseStudents(toCsvBytes(TEMPLATE, { bom: true }));
-    expect(summarize(students)).toEqual(TEMPLATE_RESULT);
-  });
-
-  it("[Q-10] BOM이 없는 UTF-8은 한글이 깨져 실패로 알린다", async () => {
-    expect(await runWorker(toCsvBytes(TEMPLATE))).toMatchObject(NO_STUDENTS_FOUND);
-  });
-
-  it("[Q-10] 엑셀 기본 CSV 인코딩(EUC-KR)도 한글이 깨져 실패로 알린다", async () => {
-    // "반/번호,이름\n1/1,가\n"의 EUC-KR 바이트
-    const bytes = new Uint8Array([
-      0xb9, 0xdd, 0x2f, 0xb9, 0xf8, 0xc8, 0xa3, 0x2c, 0xc0, 0xcc, 0xb8, 0xa7, 0x0a,
-      0x31, 0x2f, 0x31, 0x2c, 0xb0, 0xa1, 0x0a,
-    ]);
-    expect(await runWorker(bytes)).toMatchObject(NO_STUDENTS_FOUND);
-  });
-
-  it("[Q-10] BOM이 있어도 반/번호 1/1이 날짜로 바뀌어 다중 영역은 실패로 알린다", async () => {
-    const result = await runWorker(toCsvBytes(NICE_MULTI_ROWS, { bom: true }));
-    expect(result).toMatchObject(NO_STUDENTS_FOUND);
-  });
-
-  it("[Q-10] BOM이 있어도 단일 영역은 반과 번호가 날짜 일련번호로 바뀐다", async () => {
-    const students = await parseStudents(toCsvBytes(NICE_SINGLE_ROWS, { bom: true }));
-    expect(students).toHaveLength(3);
-    expect(students[0]).toMatchObject({ grade: 2, name: "김가상" });
-    expect(students[0].class).toBeGreaterThan(30000);
-    expect(students[0].number).toBe(students[0].class);
-  });
-
-  it("[Q-10] 일반 표도 같은 이유로 반과 번호가 날짜 일련번호로 바뀐다", async () => {
-    const students = await parseStudents(
-      toCsvBytes([FLAT_HEADER, [2, "1/1", "김가상", "독서", 8, 10]], { bom: true })
-    );
-    expect(students[0].class).toBeGreaterThan(30000);
-    expect(students[0].evaluations).toEqual([{ area: "독서", score: 8, maxScore: 10 }]);
   });
 });
 

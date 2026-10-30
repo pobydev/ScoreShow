@@ -67,8 +67,8 @@ describe("autoDetectMapping", () => {
     expect(autoDetectMapping([["점수", "총점"]]).maxScore).toBeUndefined();
   });
 
-  it("[Q-28] 영어 score, area 헤더는 잡지 못한다", () => {
-    expect(autoDetectMapping([["score", "area", "max"]])).toEqual({});
+  it("[Q-28] 영어 score, area 헤더도 잡는다", () => {
+    expect(autoDetectMapping([["score", "area", "max"]])).toEqual({ score: 0, area: 1 });
   });
 
   it("[Q-18] 2025학년도 같은 제목은 학년 컬럼으로 잡지 않는다", () => {

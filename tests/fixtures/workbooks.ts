@@ -31,16 +31,6 @@ export function toWorkbookBytes(
   return new Uint8Array(data);
 }
 
-export function toCsvBytes(
-  rows: Rows,
-  options: { bom?: boolean } = {}
-): Uint8Array {
-  const text = rows
-    .map((row) => row.map((cell) => cell ?? "").join(","))
-    .join("\n");
-  return new TextEncoder().encode((options.bom ? "﻿" : "") + text);
-}
-
 /** 나이스 다중 영역 형식: 표 헤더에 영역이 나열되고 바로 아래 행에 만점이 있습니다. */
 export const NICE_MULTI_ROWS: Rows = [
   ["2025학년도 1학기 수행평가 일람표", "", "", "", "", "", ""],
