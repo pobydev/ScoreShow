@@ -435,23 +435,19 @@ test("RB-16 made by gnilab", async ({ app, page }) => {
     expect(await logo.evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true);
   };
 
-  // 시작 화면 맨 아래
+  // 시작 화면에는 없습니다.
   await app.seed(null);
-  await check(page.locator("body"));
-  const start = await madeBy.boundingBox();
-  expect(start.y + start.height).toBeGreaterThan(900 - 40);
+  await expect(madeBy).toHaveCount(0);
 
   // 사용 안내 창 안
   await app.ui.guide.click();
   await check(page.getByRole("dialog"));
 
-  // 사이드바 맨 아래
+  // 사이드바에는 없습니다.
   await app.seed(mixedStudents());
-  await check(page.locator("aside"));
-  const side = await madeBy.boundingBox();
-  expect(side.y + side.height).toBeGreaterThan(900 - 40);
+  await expect(madeBy).toHaveCount(0);
 
-  // 발표 화면에는 없습니다.
+  // 발표 화면에도 없습니다.
   await app.ui.start.click();
   await expect(madeBy).toHaveCount(0);
   await app.key("ArrowRight");

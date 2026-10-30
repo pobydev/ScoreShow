@@ -104,7 +104,9 @@ export function GuideDialog({
           </p>
         </section>
 
-        <MadeBy />
+        <div className="mt-2">
+          <MadeBy />
+        </div>
       </div>
     </dialog>
   );

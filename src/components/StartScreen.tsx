@@ -6,7 +6,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { AppBrand } from "./app/AppBrand";
-import { MadeBy } from "./app/MadeBy";
 import type { FileUpload } from "./app/useFileUpload";
 import { linkButton, primaryButton } from "./buttonStyles";
 import { UploadIcon } from "./icons";
@@ -94,10 +93,6 @@ export function StartScreen({
           </aside>
         </div>
       </main>
-
-      <footer className="flex-shrink-0 flex justify-end px-5 py-2">
-        <MadeBy />
-      </footer>
     </div>
   );
 }

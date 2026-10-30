@@ -4,7 +4,6 @@
 
 import { useStore } from "../store/store";
 import { AppBrand } from "./app/AppBrand";
-import { MadeBy } from "./app/MadeBy";
 import type { FileUpload } from "./app/useFileUpload";
 import { dangerLinkButton, linkButton } from "./buttonStyles";
 import { StudentList } from "./StudentList";
@@ -64,7 +63,6 @@ export function Sidebar({
         </button>
         <DeleteDataButton />
       </div>
-      <MadeBy />
     </aside>
   );
 }

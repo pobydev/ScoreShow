@@ -68,8 +68,8 @@ node e2e/results-table.mjs <지금 화면 JSON> <새 화면 JSON> docs/refactor/
 
 | 구역 | 내용 | 코드 |
 |------|------|------|
-| 시작 화면 | 큰 놓는 칸, 파일 선택, 나이스에서 받는 방법, 표준 서식 받기, 저장 위치 한 줄, 사용 안내, made by gnilab | `components/StartScreen.tsx` |
-| 사이드바 | 로고와 소개와 버전, 파일 이름과 다른 파일 열기, 검색, 학생 목록, 사용 안내, 데이터 삭제, made by gnilab | `components/Sidebar.tsx`, `StudentList.tsx` |
+| 시작 화면 | 큰 놓는 칸, 파일 선택, 나이스에서 받는 방법, 표준 서식 받기, 저장 위치 한 줄, 사용 안내 | `components/StartScreen.tsx` |
+| 사이드바 | 로고와 소개와 버전, 파일 이름과 다른 파일 열기, 검색, 학생 목록, 사용 안내, 데이터 삭제 | `components/Sidebar.tsx`, `StudentList.tsx` |
 | 작업 영역 | 학생 제목, 점수 수정, 발표 시작, 점수 카드, 저장 위치 한 줄 | `components/PreviewPanel.tsx` |
 | 사용 안내 창 | 옛 안내 상자의 내용 전부, 표준 서식 받기, made by gnilab | `components/app/GuideDialog.tsx` |
 | 발표 화면 | 흰 사이드바, 바탕 위 흰 카드, 큰 글씨. 세 화면을 한 구조로 합침 | `components/Presenter.tsx`, `presenter/` |
@@ -77,7 +77,7 @@ node e2e/results-table.mjs <지금 화면 JSON> <새 화면 JSON> docs/refactor/
 
 지운 파일: `FilePicker.tsx`, `app/AppHeader.tsx`, `app/DataSafetyNotice.tsx`, `preview/ActionButtons.tsx`.
 
-`made by gnilab`은 `brand/DESIGN.md`의 앱 안 표기대로 사이드바 맨 아래, 시작 화면 맨 아래, 사용 안내 창에 넣었고 발표 화면에는 넣지 않았습니다. 로고는 `src/assets/gnilab.svg`로 복사해 번들했고, 높이 16px, `made by` 12px `--soft`, 간격 5px, 누를 수 없습니다(`RB-16`).
+`made by gnilab`은 `brand/DESIGN.md`의 앱 안 표기대로 사용 안내 창에만 넣었습니다(2026-10-30 변경). 사이드바, 시작 화면, 발표 화면에는 넣지 않습니다. 이 결정 전에 찍은 캡처에는 사이드바와 시작 화면에 표시가 보입니다. 로고는 `src/assets/gnilab.svg`로 복사해 번들했고, 높이 16px, `made by` 12px `--soft`, 간격 5px, 누를 수 없습니다(`RB-16`).
 
 ## 전과 달라진 점
 
