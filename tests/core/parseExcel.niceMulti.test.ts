@@ -161,14 +161,14 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(students.map((s) => s.number)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
   });
 
-  it("[Q-03] 뒤에 번호 1인 학생이 있으면 그 앞의 행을 버린다", async () => {
+  it("[Q-03] 뒤에 번호 1인 학생이 있어도 그 앞의 행을 읽는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "말하기"],
       ["1/2", "김가상", 1],
       ["1/3", "이가상", 2],
       ["2/1", "박가상", 3],
     ]);
-    expect(students.map((s) => s.id)).toEqual(["1-2-1"]);
+    expect(students.map((s) => s.id)).toEqual(["1-1-2", "1-1-3", "1-2-1"]);
   });
 
   it("[Q-03] 번호 1인 학생이 아예 없으면 첫 행부터 읽는다", async () => {

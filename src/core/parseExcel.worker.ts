@@ -840,9 +840,21 @@ self.onmessage = async function (
       }
     }
 
-    // 최소 검색 시작 행: "반/번호" 헤더 다음 행 또는 maxHeaderRows 중 큰 값
-    const minSearchRow =
-      classHeaderRow >= 0 ? classHeaderRow + 1 : maxHeaderRows;
+    // "반/번호" 헤더가 없으면 앞쪽 행에서 "1/1" 꼴 칸이 처음 나오는 행을 찾습니다.
+    const firstClassNumberRow =
+      classHeaderRow >= 0
+        ? -1
+        : headerRows.findIndex((cells) =>
+            cells.some((cell) => /^\d+\s*\/\s*\d+$/.test((cell || "").trim()))
+          );
+
+    // 최소 검색 시작 행: "반/번호" 헤더 다음 행, "1/1" 꼴 칸이 처음 나오는 행, maxHeaderRows 순으로 정합니다.
+    let minSearchRow = maxHeaderRows;
+    if (classHeaderRow >= 0) {
+      minSearchRow = classHeaderRow + 1;
+    } else if (firstClassNumberRow >= 0) {
+      minSearchRow = firstClassNumberRow;
+    }
 
     let dataStartRow = minSearchRow;
     const candidateRows: {
@@ -967,9 +979,21 @@ self.onmessage = async function (
         console.log(`[Parser] Found ${candidateRows.length} candidate rows`);
       }
 
-      // 1. "1/1" 형식 우선 (가장 앞에 있는 것)
+      // 1. 반/번호 칸의 후보가 있으면 가장 앞에 있는 행 (번호 1번이 없는 반도 빠지지 않도록)
+      const classColumnRows = candidateRows.filter((c) => c.col === classColumnIndex);
+      // 2. "1/1" 형식 우선 (가장 앞에 있는 것)
       const firstStudents = candidateRows.filter((c) => c.studentNum === 1);
-      if (firstStudents.length > 0) {
+      if (classColumnRows.length > 0) {
+        classColumnRows.sort((a, b) => a.row - b.row);
+        dataStartRow = classColumnRows[0].row;
+        if (import.meta.env.DEV) {
+          console.log(
+            `[Parser] Data starts at row ${
+              dataStartRow + 1
+            } (found earliest in class column: "${classColumnRows[0].value}")`
+          );
+        }
+      } else if (firstStudents.length > 0) {
         // 가장 앞에 있는 행 선택
         firstStudents.sort((a, b) => a.row - b.row);
         dataStartRow = firstStudents[0].row;
@@ -981,7 +1005,7 @@ self.onmessage = async function (
           );
         }
       } else {
-        // 2. 가장 앞에 있는 행 선택
+        // 3. 가장 앞에 있는 행 선택
         candidateRows.sort((a, b) => a.row - b.row);
         dataStartRow = candidateRows[0].row;
         if (import.meta.env.DEV) {

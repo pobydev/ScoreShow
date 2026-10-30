@@ -126,11 +126,11 @@ describe("일반 표의 이상 동작", () => {
     expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 
-  it("[Q-09] 반/번호 헤더가 없으면 앞쪽 15행을 조용히 버린다", async () => {
+  it("[Q-09] 반/번호 헤더가 없어도 1/1 꼴 칸이 처음 나오는 행부터 읽는다", async () => {
     const rows: Rows = [["학년", "학급번호", "이름", "평가영역", "점수", "만점"]];
     for (let i = 1; i <= 20; i++) rows.push([2, `1/${i}`, "김가상", "독서", 8, 10]);
     const students = await parseRows(rows);
-    expect(students.map((s) => s.number)).toEqual([15, 16, 17, 18, 19, 20]);
+    expect(students.map((s) => s.number)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
   });
 
   it("[Q-18] 2025학년도 제목만 있으면 A열 반/번호의 반을 학년으로 읽는다", async () => {
@@ -177,13 +177,11 @@ describe("일반 표의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-28] 영어 헤더 표는 점수와 데이터 시작 행을 찾지 못해 실패로 알린다", async () => {
-    const result = await runWorker(
-      toWorkbookBytes([
-        ["grade", "class", "name", "score"],
-        [2, "1/1", "김가상", 8],
-      ])
-    );
-    expect(result).toMatchObject(NO_STUDENTS_FOUND);
+  it("[Q-28] 영어 헤더 표는 학생은 읽지만 score 칸을 찾지 못해 점수가 null이다", async () => {
+    const students = await parseRows([
+      ["grade", "class", "name", "score"],
+      [2, "1/1", "김가상", 8],
+    ]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 평가:null/100"]);
   });
 });

@@ -218,7 +218,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(await parseRows(rows)).toHaveLength(30);
   });
 
-  it("[Q-03] 뒤에 번호 1인 학생이 있으면 그 앞의 행을 버린다", async () => {
+  it("[Q-03] 뒤에 번호 1인 학생이 있어도 그 앞의 행을 읽는다", async () => {
     const students = await parseRows([
       META,
       TABLE_HEADER,
@@ -226,7 +226,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ["1/3", "이가상", 2, ""],
       ["2/1", "박가상", 3, ""],
     ]);
-    expect(students.map((s) => s.id)).toEqual(["1-2-1"]);
+    expect(students.map((s) => s.id)).toEqual(["1-1-2", "1-1-3", "1-2-1"]);
   });
 
   it("[Q-06] 이름에 결시 낱말이 들어 있으면 점수가 지워진다", async () => {
