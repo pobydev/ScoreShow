@@ -37,7 +37,8 @@ if (!gotTheLock) {
         // Electron에서 input 필드의 키보드 입력이 정상 작동하도록 설정
         spellcheck: false,
       },
-      icon: path.join(__dirname, "../public/pwa-192x192.png"),
+      // 설치본에는 public이 없고 빌드 결과인 dist에 같은 파일이 있습니다.
+      icon: path.join(__dirname, isDev ? "../public/icons/scoreshow-256.png" : "../dist/icons/scoreshow-256.png"),
       show: false, // 창이 준비될 때까지 숨김
     });
 

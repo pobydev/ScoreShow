@@ -62,7 +62,7 @@
       }
     ],
     "win": {
-      "icon": "logo.ico",
+      "icon": "public/icons/scoreshow.ico",
       "target": [
         {
           "target": "nsis",
@@ -79,6 +79,7 @@
       "createStartMenuShortcut": true
     },
     "mac": {
+      "icon": "public/icons/scoreshow-512.png",
       "target": [
         {
           "target": "dmg",
@@ -90,6 +91,7 @@
       ]
     },
     "linux": {
+      "icon": "public/icons/scoreshow-512.png",
       "target": [
         {
           "target": "AppImage",
