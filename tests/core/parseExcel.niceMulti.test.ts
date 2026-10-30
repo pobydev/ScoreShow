@@ -3,6 +3,10 @@ import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpe
 import {
   NICE_MULTI_MERGES,
   NICE_MULTI_ROWS,
+  NICE_REAL_AREAS_MERGES,
+  NICE_REAL_AREAS_ROWS,
+  NICE_REAL_NAMED_MERGES,
+  NICE_REAL_NAMED_ROWS,
   NICE_STRUCTURE_MERGES,
   NICE_STRUCTURE_ROWS,
   toWorkbookBytes,
@@ -88,7 +92,7 @@ describe("나이스 다중 영역", () => {
     ]);
   });
 
-  it("이름이 없거나 반/번호를 읽지 못하는 행을 버린다", async () => {
+  it("반/번호를 읽지 못하는 행을 버리고 이름이 없으면 반/번호를 이름으로 보여 준다", async () => {
     const students = await parseRows([
       HEADER,
       MAX_ROW,
@@ -97,7 +101,10 @@ describe("나이스 다중 영역", () => {
       ["가/3", "박가상", 1, 1],
       ["합계", "", 2, 2],
     ]);
-    expect(students.map((s) => s.id)).toEqual(["1-1-1"]);
+    expect(students.map((s) => [s.id, s.name])).toEqual([
+      ["1-1-1", "김가상"],
+      ["1-1-2", "1/2"],
+    ]);
   });
 
   it("같은 학생이 다시 나오면 첫 이름을 두고 점수를 덮어쓴다", async () => {
@@ -126,6 +133,25 @@ describe("나이스 다중 영역", () => {
     expect(await runWorker(toWorkbookBytes([...memo(15), ...table]))).toMatchObject(
       NO_STUDENTS_FOUND
     );
+  });
+});
+
+describe("실제 나이스 파일의 구조", () => {
+  it("성명 칸이 빈 전체 영역 파일의 학생을 반/번호로 보여 주고 합계와 통계 줄은 읽지 않는다", async () => {
+    const students = await parseRows(NICE_REAL_AREAS_ROWS, NICE_REAL_AREAS_MERGES);
+    expect(summarize(students)).toEqual([
+      "2-1-1 1/1 | 탐구1:18/20 탐구2:17/20 토론:25/30 실험:4/5",
+      "2-1-2 1/2 | 탐구1:20/20 탐구2:null/20 토론:30/30 실험:5/5",
+      "2-1-3 1/3 | 탐구1:12/20 탐구2:11/20 토론:15/30 실험:3/5",
+    ]);
+  });
+
+  it("이름이 있고 제목 다음 줄부터 학생인 전체 영역 파일을 읽는다", async () => {
+    const students = await parseRows(NICE_REAL_NAMED_ROWS, NICE_REAL_NAMED_MERGES);
+    expect(summarize(students)).toEqual([
+      "2-1-1 김가상 | 탐구1:18/20 탐구2:17/20 토론:25/30 실험:4/5",
+      "2-1-2 이가상 | 탐구1:20/20 탐구2:19/20 토론:30/30 실험:5/5",
+    ]);
   });
 });
 

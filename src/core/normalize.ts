@@ -144,6 +144,7 @@ export function normalizeRow(row: ParsedRow): {
   let grade = parseInteger(row.grade);
   let classNum: number | null = null;
   let number: number | null = null;
+  let hasClassAndNumber = false;
 
   // "반/번호"가 하나의 필드에 있는 경우 처리
   if (row.class || row.number) {
@@ -152,6 +153,7 @@ export function normalizeRow(row: ParsedRow): {
     if (classAndNumber) {
       classNum = classAndNumber.class;
       number = classAndNumber.number;
+      hasClassAndNumber = true;
     } else {
       // 별도 필드인 경우
       classNum = parseInteger(row.class);
@@ -159,7 +161,9 @@ export function normalizeRow(row: ParsedRow): {
     }
   }
 
-  const name = normalizeName(row.name);
+  // 성명 칸이 빈 나이스 파일이 있으므로 학생을 빼지 않고 반/번호로 보여 줍니다.
+  const name =
+    normalizeName(row.name) || (hasClassAndNumber ? `${classNum}/${number}` : "");
   const score = parseScore(row.score);
   let maxScore = parseMaxScore(row.maxScore, score);
 

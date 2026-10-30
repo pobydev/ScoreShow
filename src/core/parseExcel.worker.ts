@@ -167,10 +167,10 @@ function findAreaColumnsByStructure(
 
   const studentRows: number[] = [];
   for (let row = headerRow + 1; row <= range.e.r; row++) {
-    const isStudent =
-      /^\d+\s*\/\s*\d+/.test(getRawCellValue(worksheet, row, classCol).trim()) &&
-      getRawCellValue(worksheet, row, nameCol).trim() !== "";
-    if (isStudent) studentRows.push(row);
+    // 성명 칸이 빈 파일이 있으므로 반/번호만 봅니다.
+    if (/^\d+\s*\/\s*\d+/.test(getRawCellValue(worksheet, row, classCol).trim())) {
+      studentRows.push(row);
+    }
   }
 
   const hasScoreOrAbsence = (col: number) =>
@@ -1658,9 +1658,8 @@ self.onmessage = async function (
           mapping.name !== undefined && mapping.name < rawRowData.length
             ? rawRowData[mapping.name] || ""
             : "";
-        const name = nameValue.trim();
-
-        if (!name) continue;
+        // 성명 칸이 빈 나이스 파일이 있으므로 학생을 빼지 않고 반/번호로 보여 줍니다.
+        const name = nameValue.trim() || `${classNum}/${number}`;
 
         // 학년 정보
         const grade = extractedGrade !== null ? extractedGrade : 1;

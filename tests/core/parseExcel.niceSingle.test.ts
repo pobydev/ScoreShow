@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import {
+  NICE_REAL_SINGLE_MERGES,
+  NICE_REAL_SINGLE_ROWS,
   NICE_SINGLE_MERGES,
   NICE_SINGLE_ROWS,
   toWorkbookBytes,
@@ -15,6 +17,15 @@ const META = ["영역 : 듣기", "영역만점 : 10"];
 const TABLE_HEADER = ["반/번호", "성명", "점수", "비고"];
 
 describe("나이스 단일 영역", () => {
+  it("성명 칸이 빈 실제 구조의 파일에서 학생을 반/번호로 보여 주고 통계 줄은 읽지 않는다", async () => {
+    const students = await parseRows(NICE_REAL_SINGLE_ROWS, NICE_REAL_SINGLE_MERGES);
+    expect(summarize(students)).toEqual([
+      "2-1-1 1/1 | 탐구1:8.5/10",
+      "2-1-2 1/2 | 탐구1:null/10",
+      "2-1-3 1/3 | 탐구1:6/10",
+    ]);
+  });
+
   it("메타데이터의 학년, 영역, 만점과 병합된 점수 헤더를 읽는다", async () => {
     const students = await parseRows(NICE_SINGLE_ROWS, NICE_SINGLE_MERGES);
     expect(summarize(students)).toEqual([
@@ -114,7 +125,7 @@ describe("나이스 단일 영역", () => {
     expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:null/10"]);
   });
 
-  it("이름이 빈 행과 표 아래 바닥글을 버린다", async () => {
+  it("표 아래 바닥글을 버리고 이름이 빈 학생은 반/번호로 보여 준다", async () => {
     const students = await parseRows([
       META,
       TABLE_HEADER,
@@ -123,7 +134,10 @@ describe("나이스 단일 영역", () => {
       ["담당교사", "가상선생", "", ""],
       ["합계", "", 17, ""],
     ]);
-    expect(students.map((s) => s.id)).toEqual(["1-1-1"]);
+    expect(students.map((s) => [s.id, s.name])).toEqual([
+      ["1-1-1", "김가상"],
+      ["1-1-2", "1/2"],
+    ]);
   });
 
   it("2025학년도는 학년으로 읽지 않고 2학년만 읽는다", async () => {
@@ -166,7 +180,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(summarize(students)[1]).toBe("1-3-7 이가상 | 듣기:null/10");
   });
 
-  it("[Q-01] 제목 병합이 있어도 이름이 빈 행은 반/번호를 이름으로 쓰지 않고 버린다", async () => {
+  it("이름이 빈 행은 빼지 않고 반/번호를 이름으로 보여 준다", async () => {
     const students = await parseRows(
       [
         ["제목", "", "", ""],
@@ -177,7 +191,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ],
       ["A1:D1"]
     );
-    expect(students.map((s) => s.id)).toEqual(["1-1-7"]);
+    expect(summarize(students)).toEqual(["1-1-7 김가상 | 듣기:8/10", "1-1-8 1/8 | 듣기:9/10"]);
   });
 
   it("[Q-01] 그 학생 줄을 덮는 병합은 지금처럼 첫 칸 값을 읽는다", async () => {

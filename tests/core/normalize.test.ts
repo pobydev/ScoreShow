@@ -170,10 +170,16 @@ describe("normalizeRow 학년, 반, 번호, 이름, 영역", () => {
     ["반이 없음", { class: undefined }],
     ["번호가 없음", { class: "1", number: undefined }],
     ["반/번호를 읽지 못함", { class: "가/1" }],
-    ["이름이 없음", { name: undefined }],
-    ["이름이 공백", { name: "   " }],
+    ["반과 번호가 따로이고 이름이 없음", { class: "1", number: "3", name: undefined }],
   ])("%s → null", (_label, row) => {
     expect(normalizeRow({ ...BASE, ...row })).toBeNull();
+  });
+
+  it.each([
+    ["없으면", undefined],
+    ["공백이면", "   "],
+  ])("이름이 %s 반/번호를 이름으로 쓴다", (_label, name) => {
+    expect(normalizeRow({ ...BASE, name })?.name).toBe("1/3");
   });
 
   it("학년이 없거나 숫자가 아니면 1이다", () => {
