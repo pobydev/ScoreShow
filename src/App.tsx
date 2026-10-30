@@ -24,7 +24,7 @@ function App() {
   }, [loadFromStorage]);
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="h-screen overflow-hidden flex flex-col bg-canvas">
       {/* 발표 모드 */}
       {isPresenterMode && <Presenter />}
 
@@ -42,8 +42,8 @@ function App() {
           {isLoading && (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary)' }}></div>
-                <p className="mt-2 text-ocean-700">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
+                <p className="mt-2 text-body text-soft">
                   데이터를 처리하고 있습니다...
                 </p>
               </div>

@@ -5,10 +5,10 @@
 export function StatusMessage({ message }: { message: string }) {
   return (
     <div
-      className={`mb-4 p-4 border rounded-lg ${
+      className={`mb-4 px-4 py-3 border rounded-card text-body ${
         message.startsWith("✅")
-          ? "bg-green-50 border-green-200 text-green-700"
-          : "bg-red-50 border-red-200 text-red-700"
+          ? "bg-wash border-tint text-accent-ink"
+          : "bg-card border-danger text-danger"
       }`}
       role="alert"
       aria-live="polite"

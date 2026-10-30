@@ -11,6 +11,7 @@ export function FilePicker() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { setLoading, setError, setStudents, setMapping } = useStore();
+  const hasStudents = useStore((state) => state.students.length > 0);
 
   const fetchTemplateFromWeb = async (): Promise<Blob> => {
     for (const templateUrl of TEMPLATE_DOWNLOAD_URLS) {
@@ -137,12 +138,9 @@ export function FilePicker() {
   };
 
   return (
-    <div className="rounded-lg shadow p-4" style={{ backgroundColor: "var(--card)" }}>
+    <div className="rounded-card shadow-card bg-card px-4 py-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <label
-          className="text-sm font-medium whitespace-nowrap"
-          style={{ color: "var(--foreground)" }}
-        >
+        <label className="text-small font-semibold whitespace-nowrap text-ink">
           Spreadsheet:
         </label>
         <input
@@ -151,28 +149,24 @@ export function FilePicker() {
           accept=".xlsx,.xls,.csv"
           onChange={handleFileSelect}
           disabled={isProcessing}
-          className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold disabled:opacity-50"
-          style={{ color: "var(--muted-foreground)" }}
+          className={`text-small text-soft file:mr-3 file:py-2 file:px-4 file:rounded-button file:text-small file:font-semibold file:cursor-pointer file:transition-colors disabled:opacity-50 ${
+            hasStudents
+              ? "file:border file:border-solid file:border-hairline file:bg-card file:text-ink hover:file:bg-wash hover:file:border-ring"
+              : "file:border-0 file:bg-accent file:text-white hover:file:bg-accent-hover"
+          }`}
           aria-label="Select spreadsheet file"
         />
         <button
           type="button"
           onClick={handleDownloadTemplate}
-          className="text-sm font-semibold inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 transition-colors"
-          style={{
-            backgroundColor: "var(--accent)",
-            color: "var(--accent-foreground)",
-          }}
+          className="text-small font-semibold inline-flex items-center justify-center gap-2 rounded-button border border-hairline bg-card text-ink px-3 py-2 transition-colors hover:bg-wash hover:border-ring"
         >
           Download Template
         </button>
         {isProcessing && (
-          <div className="flex items-center gap-2" style={{ color: "var(--primary)" }}>
-            <div
-              className="animate-spin rounded-full h-4 w-4 border-b-2"
-              style={{ borderColor: "var(--primary)" }}
-            />
-            <span className="text-xs">Processing...</span>
+          <div className="flex items-center gap-2 text-accent-ink">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand" />
+            <span className="text-caption">Processing...</span>
           </div>
         )}
       </div>

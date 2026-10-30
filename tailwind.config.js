@@ -2,47 +2,70 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
+    // 그니랩 공통 디자인(DESIGN.md)의 값만 쓰도록 기본 색, 모서리, 그림자를 바꿔 끼웁니다.
+    // 실제 값은 src/index.css의 CSS 변수에 있습니다.
+    colors: {
+      transparent: "transparent",
+      current: "currentColor",
+      white: "var(--card)", // 채운 버튼의 흰 글자
+      canvas: "var(--canvas)",
+      card: "var(--card)",
+      "surface-hover": "var(--surface-hover)",
+      ink: "var(--ink)",
+      soft: "var(--soft)",
+      faint: "var(--faint)",
+      line: "var(--line)",
+      hairline: "var(--hairline)",
+      brand: "var(--brand)",
+      accent: {
+        DEFAULT: "var(--accent)",
+        hover: "var(--accent-hover)",
+        ink: "var(--accent-ink)",
+      },
+      tint: "var(--tint)",
+      wash: "var(--wash)",
+      ring: "var(--ring)",
+      board: "var(--board)",
+      celebrate: "var(--celebrate)",
+      danger: "var(--danger)",
+      overlay: "var(--overlay)",
+    },
+    fontFamily: {
+      sans: ["Freesentation", '"Malgun Gothic"', "sans-serif"],
+    },
+    borderRadius: {
+      none: "0",
+      input: "8px",
+      button: "10px",
+      card: "12px",
+      window: "14px",
+      full: "9999px",
+    },
+    boxShadow: {
+      none: "none",
+      card: "var(--shadow-card)",
+      lift: "var(--shadow-lift)",
+      float: "var(--shadow-float)",
+    },
     extend: {
-      colors: {
-        // Ocean Breeze 테마 색상 (tweakcn 기준)
-        ocean: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',  // Primary
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
-        },
-        // Secondary 색상 (하늘색 계열)
-        sky: {
-          50: '#e0f2fe',  // Secondary (#e0f2fe)
-          100: '#bae6fd',
-          200: '#7dd3fc',
-          300: '#38bdf8',
-          400: '#0ea5e9',
-          500: '#0284c7',
-          600: '#0369a1',
-          700: '#075985',
-          800: '#0c4a6e',
-          900: '#082f49',
-        },
-        // Secondary Foreground
-        gray: {
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',  // Secondary Foreground (#4b5563)
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-        },
+      borderColor: {
+        DEFAULT: "var(--line)",
+      },
+      ringColor: {
+        DEFAULT: "var(--ring)",
+      },
+      // 화면 글자 8단계. 기본 크기(text-xl 등)는 발표 화면에서만 씁니다.
+      fontSize: {
+        micro: ["11px", "16px"],
+        caption: ["12px", "18px"],
+        small: ["13px", "20px"],
+        body: ["14px", "22px"],
+        emph: ["16px", "24px"],
+        "title-sm": ["18px", "26px"],
+        title: ["24px", "32px"],
+        display: ["32px", "40px"],
       },
     },
   },
   plugins: [],
 };
-
