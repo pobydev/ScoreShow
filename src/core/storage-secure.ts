@@ -71,4 +71,10 @@ export async function loadStudents(): Promise<Student[] | null> {
 
 export async function clearStorage(): Promise<void> {
   await clear();
+  // 데이터를 지우면 그 데이터를 풀던 키도 남길 이유가 없습니다.
+  try {
+    window.localStorage.removeItem(KEY_STORAGE_KEY);
+  } catch {
+    // localStorage를 쓸 수 없으면 지울 키도 없습니다.
+  }
 }

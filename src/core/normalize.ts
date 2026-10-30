@@ -203,12 +203,6 @@ export function normalizeRow(row: ParsedRow): {
   // (점수가 나중에 입력될 수 있음)
   // score가 null이면 null로 유지 (미입력 상태)
 
-  // 만점 초과 체크
-  const rawScore = parseScore(row.score);
-  if (rawScore !== null && rawScore > maxScore) {
-    console.warn(`Score exceeds max: ${rawScore}/${maxScore} for ${name}`);
-  }
-
   return {
     grade,
     class: classNum,

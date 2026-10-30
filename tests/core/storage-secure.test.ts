@@ -36,6 +36,7 @@ function stubWindow() {
     localStorage: {
       getItem: (key: string) => local.get(key) ?? null,
       setItem: (key: string, value: string) => local.set(key, value),
+      removeItem: (key: string) => local.delete(key),
     },
   });
   return local;
@@ -115,11 +116,22 @@ describe("암호화 저장의 이상 동작", () => {
     expect(decrypt(idb.get(DATA_KEY), local.get(SECRET_KEY) as string)).toContain("김가상");
   });
 
-  it("[Q-31] clearStorage는 localStorage의 암호화 키를 지우지 않는다", async () => {
+  it("[Q-31] clearStorage는 localStorage의 암호화 키도 지운다", async () => {
     const local = stubWindow();
     await saveStudents(STUDENTS);
     await clearStorage();
-    expect(local.has(SECRET_KEY)).toBe(true);
+    expect(local.has(SECRET_KEY)).toBe(false);
+  });
+
+  it("[Q-31] localStorage를 쓸 수 없어도 clearStorage는 실패하지 않는다", async () => {
+    vi.stubGlobal("window", {
+      localStorage: {
+        removeItem: () => {
+          throw new Error("차단됨");
+        },
+      },
+    });
+    await expect(clearStorage()).resolves.toBeUndefined();
   });
 
   it("[Q-31] localStorage를 쓸 수 없으면 코드에 적힌 고정 키로 암호화한다", async () => {

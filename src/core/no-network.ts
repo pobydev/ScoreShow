@@ -3,27 +3,23 @@
  * 외부 전송을 완전히 차단하여 오프라인 전용 앱을 보장합니다.
  */
 
-// fetch 오버라이드
-import { TEMPLATE_FILE_NAME } from "./template";
-
-function isAllowedTemplateUrl(url: string): boolean {
-  return (
-    url.startsWith("https://raw.githubusercontent.com/pobydev/ScoreShow/") &&
-    url.endsWith(`/public/${TEMPLATE_FILE_NAME}`)
-  );
+// 앱 안의 자원만 허용합니다. "//"나 "/\"로 시작하면 외부 주소입니다.
+function isLocalUrl(url: string): boolean {
+  return url.startsWith("blob:") || url.startsWith("data:") || /^\/(?![/\\])/.test(url);
 }
 
+// fetch 오버라이드
 const originalFetch = window.fetch;
 window.fetch = function (...args: Parameters<typeof fetch>) {
   // 로컬 리소스는 허용 (blob:, data: 등)
-  const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url;
-  if (
-    url.startsWith("blob:") ||
-    url.startsWith("data:") ||
-    url.startsWith("/") ||
-    // 템플릿 파일 다운로드를 위한 GitHub raw URL 허용
-    isAllowedTemplateUrl(url)
-  ) {
+  const target = args[0];
+  const url =
+    typeof target === "string"
+      ? target
+      : target instanceof URL
+        ? target.href
+        : (target as Request).url;
+  if (isLocalUrl(url)) {
     return originalFetch.apply(window, args);
   }
   console.warn("[Network Blocked] fetch request prevented:", url);
@@ -42,11 +38,7 @@ XMLHttpRequest.prototype.open = function (
   password?: string | null
 ) {
   const urlStr = typeof url === "string" ? url : url.toString();
-  if (
-    !urlStr.startsWith("blob:") &&
-    !urlStr.startsWith("data:") &&
-    !urlStr.startsWith("/")
-  ) {
+  if (!isLocalUrl(urlStr)) {
     console.warn("[Network Blocked] XMLHttpRequest prevented:", urlStr);
     throw new Error("Network requests are disabled in offline mode");
   }
@@ -68,10 +60,7 @@ if (typeof WebSocket !== "undefined") {
     class BlockedWebSocket extends OriginalWebSocket {
       constructor(url: string | URL, protocols?: WebSocketProtocol) {
         const urlStr = typeof url === "string" ? url : url.toString();
-        if (
-          !urlStr.startsWith("ws://localhost") &&
-          !urlStr.startsWith("wss://localhost")
-        ) {
+        if (!/^wss?:\/\/localhost(?::\d+)?(?:[/?#]|$)/.test(urlStr)) {
           console.warn("[Network Blocked] WebSocket prevented:", urlStr);
           throw new Error("WebSocket connections are disabled in offline mode");
         }

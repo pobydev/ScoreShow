@@ -1218,13 +1218,15 @@ self.onmessage = async function (
                 } else if (dataStartRow === maxHeaderRows) {
                   // 첫 번째로 만나는 "반/번호" 형식 저장
                   dataStartRow = row;
-                  console.log(
-                    `[Parser] Data starts at row ${
-                      row + 1
-                    }, col ${String.fromCharCode(
-                      65 + col
-                    )} (found "반/번호": "${trimmed}")`
-                  );
+                  if (import.meta.env.DEV) {
+                    console.log(
+                      `[Parser] Data starts at row ${
+                        row + 1
+                      }, col ${String.fromCharCode(
+                        65 + col
+                      )} (found "반/번호": "${trimmed}")`
+                    );
+                  }
                 }
               }
             }
@@ -1259,9 +1261,11 @@ self.onmessage = async function (
 
           if (hasRealData) {
             dataStartRow = row;
-            console.log(
-              `[Parser] Data starts at row ${row + 1} (found general data)`
-            );
+            if (import.meta.env.DEV) {
+              console.log(
+                `[Parser] Data starts at row ${row + 1} (found general data)`
+              );
+            }
             break;
           }
         }

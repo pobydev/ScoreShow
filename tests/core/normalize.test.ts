@@ -105,16 +105,15 @@ describe("normalizeRow 만점", () => {
   });
 
   it("[Q-25] 만점 초과 점수는 미입력으로 두고 확인 대상으로 알린다", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const row = normalizeRow({ ...BASE, score: "12", maxScore: "10" });
     expect(row?.evaluation).toEqual({ area: "듣기", score: null, maxScore: 10 });
     expect(row?.scoreInvalid).toBe(true);
   });
 
-  it("[Q-33] 만점 초과 경고가 학생 이름과 점수를 콘솔에 남긴다", () => {
+  it("[Q-33] 만점 초과여도 학생 이름과 점수를 콘솔에 남기지 않는다", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     evaluationOf({ score: "12", maxScore: "10" });
-    expect(warn).toHaveBeenCalledWith("Score exceeds max: 12/10 for 김가상");
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 

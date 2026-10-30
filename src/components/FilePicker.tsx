@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { useStore } from "../store/store";
 import type { ColumnMapping } from "../types";
 import type { ScoreIssue } from "../core/normalize";
-import { TEMPLATE_DOWNLOAD_URLS, TEMPLATE_FILE_NAME } from "../core/template";
+import { TEMPLATE_FILE_NAME } from "../core/template";
 import { loadedMessage, uploadRejection } from "./app/loadMessages";
 
 export function FilePicker() {
@@ -15,19 +15,14 @@ export function FilePicker() {
   const { setLoading, setError, setStudents, setMapping } = useStore();
   const hasStudents = useStore((state) => state.students.length > 0);
 
-  const fetchTemplateFromWeb = async (): Promise<Blob> => {
-    for (const templateUrl of TEMPLATE_DOWNLOAD_URLS) {
-      try {
-        const response = await fetch(templateUrl);
-        if (response.ok) {
-          return await response.blob();
-        }
-      } catch {
-        // Try next fallback URL.
-      }
+  // 외부 통신 없이 앱에 들어 있는 파일을 받습니다.
+  const fetchBundledTemplate = async (): Promise<Blob> => {
+    // 빌드가 상대 경로(base: "./")이므로 현재 위치를 기준으로 주소를 만듭니다.
+    const response = await fetch(new URL(TEMPLATE_FILE_NAME, document.baseURI).pathname);
+    if (!response.ok) {
+      throw new Error("Bundled template file is missing.");
     }
-
-    throw new Error("Template file download failed from all fallback URLs.");
+    return response.blob();
   };
 
   const handleFileSelect = async (
@@ -129,7 +124,7 @@ export function FilePicker() {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
       } else {
-        blob = await fetchTemplateFromWeb();
+        blob = await fetchBundledTemplate();
       }
 
       const url = window.URL.createObjectURL(blob);

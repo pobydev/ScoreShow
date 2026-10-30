@@ -49,7 +49,7 @@ describe("fetch 차단", () => {
     }
   );
 
-  it.each(["blob:abc", "data:text/plain,a", "/local.json", TEMPLATE_URL])(
+  it.each(["blob:abc", "data:text/plain,a", "/local.json"])(
     "%s는 통과시킨다",
     async (url) => {
       await expect(stubWindow.fetch(url)).resolves.toBe("허용됨");
@@ -68,18 +68,25 @@ describe("fetch 차단", () => {
     );
   });
 
-  it("[Q-32] 슬래시 두 개로 시작하는 외부 주소를 통과시킨다", async () => {
-    await expect(stubWindow.fetch("//example.com/a")).resolves.toBe("허용됨");
-  });
-
-  it("[Q-32] URL 객체를 주면 거부 대신 TypeError를 던진다", () => {
-    expect(() => stubWindow.fetch(new URL("https://example.com/a"))).toThrow(TypeError);
+  it.each(["//example.com/a", "/\\example.com/a"])("[Q-32] 슬래시로 시작하는 외부 주소 %s를 막는다", async (url) => {
+    await expect(stubWindow.fetch(url)).rejects.toThrow("Network requests are disabled");
     expect(originalFetch).not.toHaveBeenCalled();
   });
 
-  it("[Q-32] 템플릿 주소를 외부 요청으로 허용한다", async () => {
-    await stubWindow.fetch(TEMPLATE_URL);
-    expect(originalFetch).toHaveBeenCalledWith(TEMPLATE_URL);
+  it("[Q-32] URL 객체도 주소로 판단해 막는다", async () => {
+    await expect(stubWindow.fetch(new URL("https://example.com/a"))).rejects.toThrow(
+      "Network requests are disabled"
+    );
+    expect(originalFetch).not.toHaveBeenCalled();
+  });
+
+  it("[Q-32] 예전 템플릿 외부 주소도 막는다", async () => {
+    await expect(stubWindow.fetch(TEMPLATE_URL)).rejects.toThrow("Network requests are disabled");
+    expect(originalFetch).not.toHaveBeenCalled();
+  });
+
+  it("[Q-32] 앱에 들어 있는 템플릿 파일은 허용한다", async () => {
+    await expect(stubWindow.fetch("/ScoreShow_Template.xlsx")).resolves.toBe("허용됨");
   });
 });
 
@@ -96,8 +103,11 @@ describe("XMLHttpRequest 차단", () => {
     expect(originalOpen).toHaveBeenCalledTimes(1);
   });
 
-  it("[Q-32] fetch에서 허용하는 템플릿 주소를 XHR은 막는다", () => {
-    expect(() => new XMLHttpRequest().open("GET", TEMPLATE_URL)).toThrow();
+  it("[Q-32] 슬래시 두 개로 시작하는 외부 주소를 막는다", () => {
+    expect(() => new XMLHttpRequest().open("GET", "//example.com/a")).toThrow(
+      "Network requests are disabled"
+    );
+    expect(originalOpen).not.toHaveBeenCalled();
   });
 });
 
@@ -114,8 +124,10 @@ describe("WebSocket 차단", () => {
     expect(socketUrls).toEqual(["ws://localhost:5173"]);
   });
 
-  it("[Q-32] localhost로 시작하는 다른 호스트를 통과시킨다", () => {
-    new stubWindow.WebSocket("ws://localhost.example.com");
-    expect(socketUrls).toEqual(["ws://localhost.example.com"]);
+  it("[Q-32] localhost로 시작하는 다른 호스트를 막는다", () => {
+    expect(() => new stubWindow.WebSocket("ws://localhost.example.com")).toThrow(
+      "WebSocket connections are disabled"
+    );
+    expect(socketUrls).toEqual([]);
   });
 });
