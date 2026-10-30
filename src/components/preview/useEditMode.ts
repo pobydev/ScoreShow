@@ -13,8 +13,15 @@ export function useEditMode(selectedStudent: Student | undefined) {
   // 편집 모드 활성화 시 첫 번째 input 필드에 포커스를 주기 위한 ref
   const firstInputRef = useRef<HTMLInputElement>(null);
 
+  // 입력할 때마다 학생 객체가 새로 만들어지므로 객체 대신 id를 봅니다.
+  // 객체를 보면 점수를 치는 도중 포커스가 첫 입력칸으로 옮겨 갑니다.
+  const focusStudentId =
+    isEditMode && selectedStudent && selectedStudent.evaluations.length > 0
+      ? selectedStudent.id
+      : null;
+
   useEffect(() => {
-    if (isEditMode && selectedStudent && selectedStudent.evaluations.length > 0) {
+    if (focusStudentId) {
       // 약간의 지연 후 포커스
       setTimeout(() => {
         if (firstInputRef.current) {
@@ -22,7 +29,7 @@ export function useEditMode(selectedStudent: Student | undefined) {
         }
       }, 50);
     }
-  }, [isEditMode, selectedStudent]);
+  }, [focusStudentId]);
 
   return {
     isEditMode,
