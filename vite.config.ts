@@ -31,13 +31,16 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        // 글꼴도 미리 받아 두어야 오프라인에서 같은 글자로 보입니다.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,ttf}"],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
         name: "ScoreShow",
         short_name: "ScoreShow",
         description: "교사용 점수 발표 도구",
-        theme_color: "#ffffff",
+        theme_color: "#f3f6fa",
+        background_color: "#f3f6fa",
         icons: [
           {
             src: "pwa-192x192.png",
