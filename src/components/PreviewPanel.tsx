@@ -40,7 +40,10 @@ export function PreviewPanel({ status }: { status: ReactNode }) {
 
   return (
     <main className="min-w-0 flex flex-col gap-5 p-4 md:flex-1 md:min-h-0 md:p-7">
-      {status}
+      {/* 좁은 창에서는 작업 영역이 목록 아래로 내려가므로 메시지를 창 위에 고정합니다. */}
+      {status && (
+        <div className="flex-shrink-0 max-md:fixed max-md:inset-x-2 max-md:top-2 max-md:z-20">{status}</div>
+      )}
 
       <div className="flex-shrink-0 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">

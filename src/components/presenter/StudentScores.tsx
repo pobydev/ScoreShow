@@ -67,7 +67,7 @@ export function StudentScores({ student }: { student: Student }) {
   const textSize = studentTextSize(evaluations.length);
 
   return (
-    <div className="presenter-stage text-center text-ink px-6 animate-fade-in w-full max-w-6xl">
+    <div className={`presenter-stage ${evaluations.length >= 5 ? 'presenter-stage-dense' : ''} text-center text-ink px-6 animate-fade-in w-full max-w-6xl`}>
       {/* 학생 정보 */}
       <div className="mb-8 md:mb-12">
         <h1 className={`${textSize.studentInfo} font-bold mb-2 md:mb-4`}>

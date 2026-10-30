@@ -123,8 +123,14 @@
     line-height: 40px;
   }
 }
-@media (max-width: 560px), (max-height: 540px) {
+@media (max-width: 560px) {
   .presenter-stage {
+    zoom: 0.6;
+  }
+}
+/* Electron 최소 창의 화면 높이가 538px입니다. 카드가 세 줄인 학생만 더 줄입니다. */
+@media (max-height: 540px) {
+  .presenter-stage-dense {
     zoom: 0.6;
   }
 }
