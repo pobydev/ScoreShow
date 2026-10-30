@@ -1002,7 +1002,8 @@ self.onmessage = async function (
 
     // "반/번호" 형식을 찾지 못한 경우 일반 데이터 확인
     // 하지만 일반 데이터 확인 시 "반/번호" 형식을 다시 한 번 전체 컬럼에서 찾기
-    if (dataStartRow === minSearchRow) {
+    // 후보를 찾았는데 그 행이 헤더 바로 아래이면 dataStartRow가 minSearchRow와 같으므로 후보 수도 봅니다.
+    if (dataStartRow === minSearchRow && candidateRows.length === 0) {
       if (import.meta.env.DEV) {
         console.log(
           `[Parser] No "반/번호" found in mapped column, searching all columns...`
@@ -1320,7 +1321,14 @@ self.onmessage = async function (
         // 병합된 셀인 경우, 병합 범위 내의 모든 열을 확인
         for (const merge of merges) {
           const { s, e } = merge;
-          if (colIndex >= s.c && colIndex <= e.c && s.c < rawRowData.length) {
+          // 다른 행의 병합(제목 등)은 이 행의 값과 상관없으므로 보지 않습니다.
+          if (
+            row >= s.r &&
+            row <= e.r &&
+            colIndex >= s.c &&
+            colIndex <= e.c &&
+            s.c < rawRowData.length
+          ) {
             // 병합 범위 내의 첫 번째 셀에서 원시 값 가져오기
             const startRawValue = rawRowData[s.c] || "";
             if (startRawValue && startRawValue.trim()) {

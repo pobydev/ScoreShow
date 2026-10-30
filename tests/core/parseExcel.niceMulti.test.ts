@@ -128,7 +128,7 @@ describe("나이스 다중 영역", () => {
 });
 
 describe("나이스 다중 영역의 이상 동작", () => {
-  it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있으면 앞 반이 통째로 빠진다", async () => {
+  it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있어도 앞 반을 읽는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "말하기"],
       ["1/1", "김가상", 1],
@@ -137,6 +137,8 @@ describe("나이스 다중 영역의 이상 동작", () => {
       ["2/2", "최가상", 4],
     ]);
     expect(summarize(students)).toEqual([
+      "1-1-1 김가상 | 말하기:1/100",
+      "1-1-2 이가상 | 말하기:2/100",
       "1-2-1 박가상 | 말하기:3/100",
       "1-2-2 최가상 | 말하기:4/100",
     ]);
@@ -152,13 +154,11 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(students.map((s) => s.id)).toEqual(["1-1-1", "1-2-1"]);
   });
 
-  it("[Q-02] 헤더 바로 아래가 첫 학생이고 16행을 넘으면 15번째 행까지의 학생이 빠진다", async () => {
+  it("[Q-02] 헤더 바로 아래가 첫 학생이고 16행을 넘어도 30명을 모두 읽는다", async () => {
     const rows: Rows = [["반/번호", "성명", "말하기"]];
     for (let i = 1; i <= 30; i++) rows.push([`1/${i}`, "김가상", 1]);
     const students = await parseRows(rows);
-    expect(students.map((s) => s.number)).toEqual(
-      Array.from({ length: 16 }, (_, i) => i + 15)
-    );
+    expect(students.map((s) => s.number)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
   });
 
   it("[Q-03] 뒤에 번호 1인 학생이 있으면 그 앞의 행을 버린다", async () => {

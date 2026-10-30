@@ -130,7 +130,7 @@ describe("일반 표의 이상 동작", () => {
     const rows: Rows = [["학년", "학급번호", "이름", "평가영역", "점수", "만점"]];
     for (let i = 1; i <= 20; i++) rows.push([2, `1/${i}`, "김가상", "독서", 8, 10]);
     const students = await parseRows(rows);
-    expect(students.map((s) => s.number)).toEqual([16, 17, 18, 19, 20]);
+    expect(students.map((s) => s.number)).toEqual([15, 16, 17, 18, 19, 20]);
   });
 
   it("[Q-18] 2025학년도 제목만 있으면 A열 반/번호의 반을 학년으로 읽는다", async () => {

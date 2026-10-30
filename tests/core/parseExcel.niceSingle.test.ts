@@ -138,7 +138,7 @@ describe("나이스 단일 영역", () => {
 });
 
 describe("나이스 단일 영역의 이상 동작", () => {
-  it("[Q-01] 제목 병합이 있으면 빈 점수에 A열 반/번호의 반이 점수로 들어간다", async () => {
+  it("[Q-01] 제목 병합이 있어도 빈 점수는 null이다", async () => {
     const students = await parseRows(
       [
         ["제목", "", "", ""],
@@ -151,7 +151,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
     );
     expect(summarize(students)).toEqual([
       "1-1-1 김가상 | 듣기:8/10",
-      "1-3-7 이가상 | 듣기:3/10",
+      "1-3-7 이가상 | 듣기:null/10",
     ]);
   });
 
@@ -166,20 +166,29 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(summarize(students)[1]).toBe("1-3-7 이가상 | 듣기:null/10");
   });
 
-  it("[Q-01] 제목 병합이 있으면 빈 이름에 반/번호가 이름으로 들어간다", async () => {
+  it("[Q-01] 제목 병합이 있어도 이름이 빈 행은 반/번호를 이름으로 쓰지 않고 버린다", async () => {
     const students = await parseRows(
       [
         ["제목", "", "", ""],
         META,
         TABLE_HEADER,
+        ["1/7", "김가상", 8, ""],
         ["1/8", "", 9, ""],
       ],
       ["A1:D1"]
     );
-    expect(summarize(students)).toEqual(["1-1-8 1/8 | 듣기:9/10"]);
+    expect(students.map((s) => s.id)).toEqual(["1-1-7"]);
   });
 
-  it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있으면 앞 반이 통째로 빠진다", async () => {
+  it("[Q-01] 그 학생 줄을 덮는 병합은 지금처럼 첫 칸 값을 읽는다", async () => {
+    const students = await parseRows(
+      [["제목", "", "", ""], META, TABLE_HEADER, ["1/1", "김가상", "", ""]],
+      ["A4:C4"]
+    );
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:1/10"]);
+  });
+
+  it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있어도 앞 반을 읽는다", async () => {
     const students = await parseRows([
       META,
       TABLE_HEADER,
@@ -187,16 +196,14 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ["1/2", "이가상", 2, ""],
       ["2/1", "박가상", 3, ""],
     ]);
-    expect(students.map((s) => s.id)).toEqual(["1-2-1"]);
+    expect(students.map((s) => s.id)).toEqual(["1-1-1", "1-1-2", "1-2-1"]);
   });
 
-  it("[Q-02] 헤더 바로 아래가 첫 학생이고 16행을 넘으면 15번째 행까지의 학생이 빠진다", async () => {
+  it("[Q-02] 헤더 바로 아래가 첫 학생이고 16행을 넘어도 30명을 모두 읽는다", async () => {
     const rows: Rows = [META, TABLE_HEADER];
     for (let i = 1; i <= 30; i++) rows.push([`1/${i}`, "김가상", 1, ""]);
     const students = await parseRows(rows);
-    expect(students.map((s) => s.number)).toEqual(
-      Array.from({ length: 17 }, (_, i) => i + 14)
-    );
+    expect(students.map((s) => s.number)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
   });
 
   it("[Q-02] 전체가 15행 이하이면 빠지지 않는다", async () => {
