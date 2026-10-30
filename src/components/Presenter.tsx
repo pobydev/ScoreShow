@@ -82,7 +82,7 @@ export function Presenter() {
 
   if (!selectedStudent || selectedStudent.evaluations.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas">
+      <div className="fixed inset-0 z-50 flex bg-canvas">
         {/* 우측 상단 종료 버튼 */}
         <PresenterActionButton
           floating
@@ -90,7 +90,16 @@ export function Presenter() {
           ariaLabel="발표 모드 종료"
           onClick={exitPresenter}
         />
-        <p className="text-xl text-ink">표시할 데이터가 없습니다.</p>
+
+        {/* 좌측: 학생 리스트 */}
+        <PresenterSidebar isExpanded={isListExpanded} onExpandedChange={setIsListExpanded}>
+          <StudentList />
+        </PresenterSidebar>
+
+        {/* 우측: 안내 메시지 */}
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-xl text-ink">표시할 데이터가 없습니다.</p>
+        </div>
       </div>
     );
   }
