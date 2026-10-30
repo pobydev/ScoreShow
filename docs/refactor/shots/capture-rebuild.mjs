@@ -132,7 +132,7 @@ await key("Escape");
 
 // 좁은 창
 for (const [width, height] of [
-  [800, 600],
+  [787, 538],
   [640, 700],
   [480, 700],
 ]) {
@@ -150,7 +150,7 @@ for (const [width, height] of [
   await button("수정 마침").click();
   await button("발표 시작").click();
   await shot(`04-narrow-presenter-1-eval-${tag}`);
-  if (width === 800) {
+  if (width === 787) {
     await row(7).click();
     await shot(`04-narrow-presenter-7-evals-${tag}`);
   }

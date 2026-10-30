@@ -179,13 +179,20 @@ test("RB-07 놓는 칸 밖에 놓기", async ({ app, page, origin }, testInfo) =
   await app.seed(null);
   // 머리 없는 Chrome은 막지 않아도 넘어가지 않으므로, 기본 동작을 막았는지도 직접 봅니다.
   const prevented = await page.evaluate(() =>
-    ["dragover", "drop"].map((type) => {
-      const event = new DragEvent(type, { bubbles: true, cancelable: true });
-      document.body.dispatchEvent(event);
-      return event.defaultPrevented;
+    ["dragover", "drop"].flatMap((type) => {
+      const withFile = new DataTransfer();
+      withFile.items.add(new File(["가상"], "가상.xlsx"));
+      const withText = new DataTransfer();
+      withText.setData("text/plain", "가상");
+      return [withFile, withText].map((dataTransfer) => {
+        const event = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer });
+        document.body.dispatchEvent(event);
+        return event.defaultPrevented;
+      });
     })
   );
-  expect(prevented).toEqual([true, true]);
+  // 파일은 막고, 입력칸에 끌어넣는 글자는 막지 않습니다.
+  expect(prevented).toEqual([true, false, true, false]);
 
   const path = writeTempFile(testInfo, xlsxFile(3));
   await dropFileAt(page, path, 10, 10);
@@ -280,8 +287,9 @@ test("RB-11 디자인 값", async ({ app, page }) => {
   });
 });
 
+// Electron 최소 창(800×600)에서 메뉴와 테두리를 뺀 실제 화면 영역이 787×538입니다.
 for (const [id, width, height, label] of [
-  ["RB-12", 800, 600, "최소 창"],
+  ["RB-12", 787, 538, "최소 창"],
   ["RB-13", 640, 700, "좁은 창 640"],
   ["RB-13", 480, 700, "좁은 창 480"],
 ]) {
@@ -301,6 +309,12 @@ for (const [id, width, height, label] of [
 
     await app.seed(mixedStudents());
     await expectNoSideScroll(page);
+
+    // 메시지는 스크롤하지 않아도 보입니다.
+    await app.upload({ name: "메모.txt", mimeType: "text/plain", buffer: Buffer.from("가상") });
+    await expect(app.ui.alert).toBeInViewport({ ratio: 1 });
+    await expect(app.ui.alert).toBeHidden({ timeout: 6500 });
+
     await expectReachable(app.ui.search);
     await expectReachable(page.getByRole("button", { name: /다른 파일 열기/ }));
     await expectReachable(app.ui.edit);
@@ -344,6 +358,7 @@ for (const [width, height] of [
   [1280, 720],
   [1024, 768],
   [800, 600],
+  [787, 538],
   [640, 700],
   [480, 700],
 ]) {
