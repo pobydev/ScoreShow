@@ -4,7 +4,7 @@
 
 import type { InputHTMLAttributes, Ref } from "react";
 import type { Evaluation } from "../../types";
-import { editInputStyle, electronInputProps } from "./electronInputProps";
+import { editInputClass, editInputStyle, electronInputProps } from "./electronInputProps";
 
 function NumberField({
   label,
@@ -12,14 +12,14 @@ function NumberField({
 }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
+      <label className="text-caption font-semibold text-soft">
         {label}
       </label>
       <input
         type="number"
         {...inputProps}
         {...electronInputProps}
-        className="w-full border rounded px-2 py-1"
+        className={`${editInputClass} text-body`}
         style={editInputStyle}
       />
     </div>
@@ -46,8 +46,8 @@ export function EvaluationEditor({
           onUpdate({ area: event.target.value });
         }}
         {...electronInputProps}
-        className="w-full text-sm font-semibold border rounded px-2 py-1"
-        style={{ borderColor: editInputStyle.borderColor, color: 'var(--foreground)', ...editInputStyle }}
+        className={`${editInputClass} text-small font-semibold`}
+        style={editInputStyle}
         placeholder="평가 영역 이름"
       />
       <div className="grid grid-cols-2 gap-2">

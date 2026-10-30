@@ -8,22 +8,19 @@ import { formatScore, hasPercent, percentOf } from "../scoreText";
 export function EvaluationSummary({ evaluation }: { evaluation: Evaluation }) {
   return (
     <>
-      <div className="font-semibold text-sm mb-1">{evaluation.area}</div>
-      <div className="text-xl font-bold mb-2" style={{ color: 'var(--primary)' }}>
+      <div className="font-semibold text-small text-ink mb-1">{evaluation.area}</div>
+      <div className="text-title font-bold text-accent-ink mb-2">
         {formatScore(evaluation)}
       </div>
       {hasPercent(evaluation) && (
         <div>
-          <div className="w-full rounded-full h-1.5 mb-1" style={{ backgroundColor: 'var(--secondary)' }}>
+          <div className="w-full rounded-full h-1.5 mb-1 bg-surface-hover">
             <div
-              className="h-1.5 rounded-full transition-all"
-              style={{
-                backgroundColor: 'var(--primary)',
-                width: `${percentOf(evaluation)}%`,
-              }}
+              className="h-1.5 rounded-full transition-all bg-brand"
+              style={{ width: `${percentOf(evaluation)}%` }}
             />
           </div>
-          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-caption text-soft">
             {percentOf(evaluation).toFixed(1)}%
           </p>
         </div>

@@ -38,8 +38,9 @@ export const electronInputProps: InputHTMLAttributes<HTMLInputElement> = {
 };
 
 export const editInputStyle: CSSProperties = {
-  borderColor: 'var(--border)',
-  backgroundColor: 'var(--card)',
   pointerEvents: 'auto',
   zIndex: 1,
 };
+
+export const editInputClass =
+  "w-full bg-card text-ink border border-hairline rounded-input px-2 py-1 focus:outline-none focus:border-ring focus:ring-2";
