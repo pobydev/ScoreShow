@@ -3,6 +3,8 @@ import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpe
 import {
   NICE_MULTI_MERGES,
   NICE_MULTI_ROWS,
+  NICE_STRUCTURE_MERGES,
+  NICE_STRUCTURE_ROWS,
   toWorkbookBytes,
 } from "../fixtures/workbooks";
 import type { Merge, Rows } from "../fixtures/workbooks";
@@ -127,6 +129,71 @@ describe("나이스 다중 영역", () => {
   });
 });
 
+describe("구조로 영역 찾기", () => {
+  it("[Q-05] 영어 낱말이 없는 실제 구조의 표에서 영역 5개와 점수를 읽는다", async () => {
+    const students = await parseRows(NICE_STRUCTURE_ROWS, NICE_STRUCTURE_MERGES);
+    expect(summarize(students)).toEqual([
+      "3-2-1 김가상 | 실험 보고서:18/20 탐구 토론:9/100 관찰 일지:7.5/100 포트폴리오:25/100 발표:10/100",
+      "3-2-2 이가상 | 실험 보고서:20/20 탐구 토론:null/100 관찰 일지:8/100 포트폴리오:30/100 발표:null/100",
+      "3-2-3 박가상 | 실험 보고서:null/20 탐구 토론:7/100 관찰 일지:6/100 포트폴리오:21/100 발표:8/100",
+    ]);
+  });
+
+  it("[Q-05] 비고, 합계, 총점처럼 점수가 아닌 칸은 영역으로 보지 않는다", async () => {
+    const students = await parseRows([
+      ["반/번호", "성명", "문법", "합계", "총점", "석차", "비고"],
+      ["", "", "만점 10", "", "", "", ""],
+      ["1/1", "김가상", 8, 8, 8, 1, "재평가"],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/10"]);
+  });
+
+  it("[Q-05] 학생 줄에 점수도 결시 값도 없는 칸은 영역으로 보지 않는다", async () => {
+    const students = await parseRows([
+      ["반/번호", "성명", "문법", "담임 확인", "독서"],
+      ["1/1", "김가상", 8, "", "인정결"],
+      ["1/2", "이가상", 9, "확인함", 7],
+    ]);
+    expect(summarize(students)).toEqual([
+      "1-1-1 김가상 | 문법:8/100 독서:null/100",
+      "1-1-2 이가상 | 문법:9/100 독서:7/100",
+    ]);
+  });
+
+  it("[Q-05] 괄호 안의 설명 낱말 때문에 영역을 빼지 않고 만점 칸은 영역으로 보지 않는다", async () => {
+    const students = await parseRows([
+      ["반/번호", "성명", "문법 (만점 10.00, 반영비율 20%)", "독서 만점", "토론(비고 참조)"],
+      ["1/1", "김가상", 8, 10, 7],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/10 토론:7/100"]);
+  });
+
+  it("아직 점수를 넣지 않은 칸은 영역 낱말이 있을 때만 미입력으로 남긴다", async () => {
+    const students = await parseRows([
+      ["반/번호", "성명", "문법", "듣기", "토론"],
+      ["1/1", "김가상", 8, "", ""],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/100 듣기:null/100"]);
+  });
+
+  it("반/번호 줄에서 영역을 못 찾으면 낱말 목록으로 찾는다", async () => {
+    const students = await parseRows([
+      ["", "", "듣기"],
+      ["반/번호", "성명", ""],
+      ["1/1", "김가상", 8],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/100"]);
+  });
+
+  it("점수나 평가영역 칸이 있는 표는 일반 표로 읽는다", async () => {
+    const students = await parseRows([
+      ["반/번호", "성명", "평가영역", "점수", "만점"],
+      ["1/1", "김가상", "말하기", 8, 10],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 말하기:8/10"]);
+  });
+});
+
 describe("나이스 다중 영역의 이상 동작", () => {
   it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있어도 앞 반을 읽는다", async () => {
     const students = await parseRows([
@@ -180,7 +247,7 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(students.map((s) => s.id)).toEqual(["1-1-2", "1-1-3"]);
   });
 
-  it("[Q-04] 비고의 영역 이름이 같은 영역의 실제 점수를 모두 지운다", async () => {
+  it("[Q-04] 비고의 영역 이름이 같은 영역의 실제 점수를 지우지 않는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "듣기", "비고"],
       ["", "", "만점 10", ""],
@@ -188,42 +255,42 @@ describe("나이스 다중 영역의 이상 동작", () => {
       ["1/2", "이가상", 9, "듣기 재평가"],
     ]);
     expect(summarize(students)).toEqual([
-      "1-1-1 김가상 | 듣기:null/100",
-      "1-1-2 이가상 | 듣기:null/100",
+      "1-1-1 김가상 | 듣기:8/10",
+      "1-1-2 이가상 | 듣기:9/10",
     ]);
   });
 
-  it("[Q-04] 비고의 다른 영역 이름이 없던 영역을 만든다", async () => {
+  it("[Q-04] 비고의 다른 영역 이름이 없던 영역을 만들지 않는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "듣기", "비고"],
       ["1/1", "김가상", 8, "말하기 미제출"],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/100 말하기:null/100"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/100"]);
   });
 
-  it("[Q-04] 같은 영역 이름이 두 칸이면 뒤 칸이 앞 칸을 덮어쓴다", async () => {
+  it("[Q-04] 같은 영역 이름이 두 칸이면 둘 다 번호를 붙여 남긴다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "말하기", "말하기"],
       ["1/1", "김가상", 8, 3],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 말하기:3/100"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 말하기:8/100 말하기(2):3/100"]);
   });
 
-  it("[Q-05] 쓰기, 말하기, 듣기, 읽기 외의 영역 열은 조용히 빠진다", async () => {
+  it("[Q-05] 쓰기, 말하기, 듣기, 읽기 외의 영역 열도 읽는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "쓰기1", "문법"],
       ["1/1", "김가상", 8, 7],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 쓰기1:8/100"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 쓰기1:8/100 문법:7/100"]);
   });
 
-  it("[Q-05] 키워드 영역이 하나도 없으면 점수를 잃고 첫 영역 점수가 만점이 된다", async () => {
+  it("[Q-05] 키워드 영역이 하나도 없어도 점수와 만점을 읽는다", async () => {
     const students = await parseRows([
       ["반/번호", "성명", "문법", "발표"],
       ["", "", "만점 10", "만점 10"],
       ["1/1", "김가상", 8, 7],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 평가:null/8"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/10 발표:7/10"]);
   });
 
   it("[Q-19] 학년 컬럼을 읽지 않고 N학년 표기가 없으면 1학년이 된다", async () => {
@@ -234,13 +301,22 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(students[0].id).toBe("1-1-1");
   });
 
-  it("[Q-21] 제목의 영역 낱말을 영역 열로 오인해 엉뚱한 열을 점수로 읽는다", async () => {
+  it("[Q-21] 제목의 영역 낱말을 영역 열로 오인하지 않고 점수 칸을 읽는다", async () => {
     const students = await parseRows([
       ["말하기 듣기 평가 안내"],
       ["학년", "반/번호", "성명", "점수"],
       [3, "1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 말하기:3/100"]);
+    expect(summarize(students)).toEqual(["3-1-1 김가상 | 평가:8/8"]);
+  });
+
+  it("[Q-21] 영역 칸이 있는 표에서도 제목의 낱말을 영역으로 만들지 않는다", async () => {
+    const students = await parseRows([
+      ["말하기 듣기 평가 안내"],
+      ["반/번호", "성명", "문법"],
+      ["1/1", "김가상", 8],
+    ]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/100"]);
   });
 
   it("[Q-25] 만점 초과, 음수, 단위, 소수점 변형 점수는 조용히 null이 된다", async () => {

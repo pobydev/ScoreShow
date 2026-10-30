@@ -18,6 +18,19 @@ interface AreaColumnInfo {
   maxScore: number; // 만점
 }
 
+// 결시 관련 낱말
+const ABSENCE_KEYWORDS = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+
+// 낱말 목록으로 찾는 평가 영역 (구조로 못 찾을 때의 보조)
+const AREA_KEYWORD = /(쓰기\d*|말하기|듣기|읽기)/i;
+
+// 일반 표(세로형)임을 나타내는 헤더. 이 칸이 있으면 헤더의 칸들을 영역으로 보지 않습니다.
+const FLAT_TABLE_LABEL = /^(점수|득점|원점수|성취점|평가영역|영역|과제명|항목|만점|배점)$/;
+
+// 점수가 들어 있어도 평가 영역이 아닌 칸
+const NON_AREA_LABEL =
+  /비고|합계|총점|총계|소계|평균|석차|등수|순위|등급|성취도|백분위|표준편차|환산|반영|학번|번호|성별|생년월일|결시|사유|^학년$|^반$|(?:만점|배점)$/;
+
 /**
  * 병합된 셀의 값을 가져옵니다.
  * 병합된 셀의 경우 첫 번째 셀에만 값이 있고 나머지는 빈 값이므로,
@@ -99,6 +112,109 @@ function parseNumericCell(value: string): number | null {
   const [head] = value.split("/");
   const numeric = parseFloat(head.replace(/,/g, ".").replace(/[^-0-9.]/g, ""));
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+/**
+ * 헤더 칸의 만점을 찾습니다. 같은 칸을 먼저 보고, 없으면 아래 두 행까지 봅니다. 못 찾으면 100입니다.
+ */
+function findAreaMaxScore(
+  worksheet: XLSX.WorkSheet,
+  label: string,
+  headerRow: number,
+  col: number,
+  headerRowCount: number
+): number {
+  const sameCell = label.match(/만점\s*[:：]?\s*(\d+\.?\d*)/i);
+  if (sameCell) return parseFloat(sameCell[1]);
+
+  for (let offset = 1; offset <= 2; offset++) {
+    const nextRow = headerRow + offset;
+    if (nextRow >= headerRowCount) break;
+    const nextMatch = getRawCellValue(worksheet, nextRow, col).match(
+      /만점\s*[:：]?\s*(\d+\.?\d*)/
+    );
+    if (nextMatch) {
+      return parseFloat(nextMatch[1]) || 100;
+    }
+  }
+  return 100;
+}
+
+/**
+ * 반/번호 헤더 행의 구조로 평가 영역을 찾습니다. 낱말 목록에 기대지 않으므로 과목이 달라도 읽습니다.
+ * 성명 칸 뒤의 이름 있는 칸 가운데 학생 행에 점수나 결시 값이 있는 칸을 영역으로 봅니다.
+ * @returns 영역 목록, 일반 표이면 "flat", 구조로 찾지 못하면 null
+ */
+function findAreaColumnsByStructure(
+  worksheet: XLSX.WorkSheet,
+  headerRow: number,
+  headerRowCount: number,
+  range: XLSX.Range,
+  merges: XLSX.Range[]
+): { columns: AreaColumnInfo[]; classCol: number; nameCol: number } | "flat" | null {
+  const labels: string[] = [];
+  for (let col = 0; col <= range.e.c; col++) {
+    labels.push(getRawCellValue(worksheet, headerRow, col).trim());
+  }
+
+  if (labels.some((label) => FLAT_TABLE_LABEL.test(normalizeHeaderLabel(label)))) {
+    return "flat";
+  }
+
+  const classCol = labels.findIndex((label) => /반.*번호|반\/번호/i.test(label));
+  const nameCol = labels.findIndex((label) => /성명|이름/.test(label));
+  if (classCol === -1 || nameCol === -1) return null;
+
+  const studentRows: number[] = [];
+  for (let row = headerRow + 1; row <= range.e.r; row++) {
+    const isStudent =
+      /^\d+\s*\/\s*\d+/.test(getRawCellValue(worksheet, row, classCol).trim()) &&
+      getRawCellValue(worksheet, row, nameCol).trim() !== "";
+    if (isStudent) studentRows.push(row);
+  }
+
+  const hasScoreOrAbsence = (col: number) =>
+    studentRows.some((row) => {
+      const value = getRawCellValue(worksheet, row, col).trim();
+      return /^-?\d+([.,]\d+)?점?$/.test(value) || ABSENCE_KEYWORDS.test(value);
+    });
+
+  const columns: AreaColumnInfo[] = [];
+  const nameCounts = new Map<string, number>();
+  for (let col = nameCol + 1; col <= range.e.c; col++) {
+    const label = labels[col];
+    if (!label || col === classCol) continue;
+
+    // 괄호 안의 설명("반영비율 20%" 등)으로 영역을 빼지 않도록 괄호를 지우고 봅니다.
+    const labelWithoutNote = label.replace(/[(（][^)）]*[)）]/g, " ").trim();
+    if (NON_AREA_LABEL.test(labelWithoutNote)) continue;
+
+    // 병합의 첫 칸만 영역 이름으로 봅니다.
+    const insideMerge = merges.some(
+      ({ s, e }) => headerRow >= s.r && headerRow <= e.r && col > s.c && col <= e.c
+    );
+    if (insideMerge) continue;
+
+    // 아직 점수를 넣지 않은 칸은 영역 낱말이 있을 때만 남깁니다.
+    if (!hasScoreOrAbsence(col) && !AREA_KEYWORD.test(label)) continue;
+
+    const baseName =
+      labelWithoutNote
+        .replace(/만점.*$/s, "")
+        .replace(/\s+/g, " ")
+        .trim() || label;
+    // 같은 이름이 두 칸이면 뒤 칸이 앞 칸을 덮어쓰지 않도록 번호를 붙입니다.
+    const count = (nameCounts.get(baseName) ?? 0) + 1;
+    nameCounts.set(baseName, count);
+
+    columns.push({
+      col,
+      areaName: count > 1 ? `${baseName}(${count})` : baseName,
+      maxScore: findAreaMaxScore(worksheet, label, headerRow, col, headerRowCount),
+    });
+  }
+
+  return columns.length > 0 ? { columns, classCol, nameCol } : null;
 }
 
 function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
@@ -451,6 +567,21 @@ self.onmessage = async function (
       }
     }
 
+    // "반/번호" 헤더가 있는 행 찾기
+    let classHeaderRow = -1;
+    for (let i = 0; i < headerRows.length; i++) {
+      const found = headerRows[i].some(
+        (cell) => cell && /반.*번호|반\/번호/i.test(cell)
+      );
+      if (found) {
+        classHeaderRow = i;
+        if (import.meta.env.DEV) {
+          console.log(`[Parser] Found "반/번호" header at row ${i + 1}`);
+        }
+        break;
+      }
+    }
+
     // 여러 평가 영역 컬럼 찾기
     const areaColumns: AreaColumnInfo[] = [];
     let extractedMaxScore: number | null = null;
@@ -531,10 +662,30 @@ self.onmessage = async function (
       if (extractedAreaFromHeader) break;
     }
 
+    // 평가 영역을 구조로 먼저 찾습니다. 단일 영역 형식이나 호출자가 매핑을 준 경우는 건너뜁니다.
+    let structuredTable: ReturnType<typeof findAreaColumnsByStructure> = null;
+    if (!extractedAreaFromHeader && !providedMapping && classHeaderRow >= 0) {
+      structuredTable = findAreaColumnsByStructure(
+        worksheet,
+        classHeaderRow,
+        headerRows.length,
+        range,
+        merges
+      );
+    }
+    if (structuredTable && structuredTable !== "flat") {
+      areaColumns.push(...structuredTable.columns);
+      mapping.class = structuredTable.classCol;
+      mapping.number = structuredTable.classCol;
+      mapping.name = structuredTable.nameCol;
+      // 제목의 영역 낱말이 영역 칸으로 잡혔다면 지웁니다.
+      delete mapping.area;
+    }
+
     // 여러 평가 영역 컬럼 찾기 (표 헤더에서 "쓰기1", "말하기", "듣기" 등)
-    // 단일 영역 형식(extractedAreaFromHeader가 true)인 경우는 건너뛰기
+    // 단일 영역 형식이나 구조로 표를 이해한 경우는 건너뛰기
     // 헤더 행에서 평가 영역 패턴 찾기: "쓰기1", "쓰기2", "말하기", "듣기", "읽기" 등
-    if (!extractedAreaFromHeader) {
+    if (!extractedAreaFromHeader && !structuredTable) {
       for (let row = 0; row < headerRows.length; row++) {
         const rowData = headerRows[row];
         const rawRowData: string[] = [];
@@ -574,7 +725,7 @@ self.onmessage = async function (
 
           // "쓰기1 (서·논술)", "말하기", "듣기" 같은 패턴
           // 먼저 평가 영역 키워드를 찾습니다
-          const areaKeywordMatch = trimmed.match(/(쓰기\d*|말하기|듣기|읽기)/i);
+          const areaKeywordMatch = trimmed.match(AREA_KEYWORD);
 
           if (areaKeywordMatch) {
             // 키워드를 포함한 전체 영역명 추출
@@ -595,36 +746,8 @@ self.onmessage = async function (
 
             // 평가 영역 키워드가 포함되어 있는지 확인 (이미 확인했지만 재확인)
             if (/(?:쓰기|말하기|듣기|읽기)/i.test(areaName)) {
-              // 만점 정보 찾기 (같은 셀 또는 인접 셀)
-              const maxScoreMatch = trimmed.match(
-                /만점\s*[:：]?\s*(\d+\.?\d*)/i
-              );
-              if (maxScoreMatch) {
-                maxScore = parseFloat(maxScoreMatch[1]);
-              } else {
-                // 인접 행에서 만점 찾기 (보통 다음 행에 있음)
-                for (let offset = 1; offset <= 2; offset++) {
-                  const nextRow = row + offset;
-                  if (nextRow < headerRows.length) {
-                    const nextRawValue = getRawCellValue(
-                      worksheet,
-                      nextRow,
-                      col
-                    );
-                    if (nextRawValue) {
-                      const nextMaxScoreMatch = nextRawValue.match(
-                        /만점\s*[:：]?\s*(\d+\.?\d*)/
-                      );
-                      if (nextMaxScoreMatch) {
-                        maxScore = parseFloat(nextMaxScoreMatch[1]);
-                        break;
-                      }
-                    }
-                  }
-                }
-                // 만점을 못 찾았으면 기본값 100
-                if (!maxScore) maxScore = 100;
-              }
+              // 만점 정보 찾기 (같은 셀 또는 인접 셀, 못 찾으면 100)
+              maxScore = findAreaMaxScore(worksheet, trimmed, row, col, headerRows.length);
 
               // 병합된 셀인지 확인: 병합의 첫 번째 컬럼 인덱스 사용
               let actualCol = col;
@@ -828,21 +951,6 @@ self.onmessage = async function (
 
     // 데이터 행 시작 위치 찾기 (빈 행 건너뛰기)
     // "반/번호" 헤더가 있는 행 다음부터 시작하되, "1/1" 형식의 첫 번째 학생 행을 찾기
-
-    // "반/번호" 헤더가 있는 행 찾기
-    let classHeaderRow = -1;
-    for (let i = 0; i < headerRows.length; i++) {
-      const found = headerRows[i].some(
-        (cell) => cell && /반.*번호|반\/번호/i.test(cell)
-      );
-      if (found) {
-        classHeaderRow = i;
-        if (import.meta.env.DEV) {
-          console.log(`[Parser] Found "반/번호" header at row ${i + 1}`);
-        }
-        break;
-      }
-    }
 
     // "반/번호" 헤더가 없으면 앞쪽 행에서 "1/1" 꼴 칸이 처음 나오는 행을 찾습니다.
     const firstClassNumberRow =
@@ -1424,7 +1532,6 @@ self.onmessage = async function (
         parsed.score = getValueFromMappedColumn(mapping.score);
         
         // 해당 행에 결시 관련 텍스트가 있는지 확인
-        const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
         let hasAbsenceReason = false;
         
         // 행의 모든 컬럼을 확인하여 결시 관련 텍스트 찾기
@@ -1437,7 +1544,7 @@ self.onmessage = async function (
           const cellValue = rawRowData[col] || "";
           const trimmed = cellValue.toString().trim();
           
-          if (trimmed && absenceKeywords.test(trimmed)) {
+          if (trimmed && ABSENCE_KEYWORDS.test(trimmed)) {
             hasAbsenceReason = true;
             if (import.meta.env.DEV && parsedRows.length === 0) {
               console.log(`[Parser] Found absence reason "${trimmed}" in column ${col}, setting score to null`);
@@ -1586,10 +1693,9 @@ self.onmessage = async function (
             const scoreStr = scoreValue.toString().trim();
 
             // 결시 관련 텍스트 체크
-            const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
             
             // 빈 셀이거나 결시 관련 텍스트면 null
-            if (!scoreStr || scoreStr === "" || absenceKeywords.test(scoreStr)) {
+            if (!scoreStr || scoreStr === "" || ABSENCE_KEYWORDS.test(scoreStr)) {
               score = null;
               if (import.meta.env.DEV) {
                 console.log(
