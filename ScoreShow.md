@@ -59,7 +59,7 @@
   │   ├─ parseExcel.worker.ts (Web Worker로 엑셀 파싱)
   │   ├─ mapping.ts (정규식 기반 자동 매핑)
   │   ├─ normalize.ts (데이터 정규화)
-  │   ├─ storage.ts (IndexedDB 저장 및 암호화)
+  │   ├─ storage-secure.ts (IndexedDB 저장 및 암호화)
   │   └─ no-network.ts (네트워크 요청 차단)
   │
   └─ IndexedDB (로컬 데이터 캐시)

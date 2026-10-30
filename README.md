@@ -179,7 +179,7 @@ src/
 │   ├── parseExcel.worker.ts  # 엑셀 파서 (Web Worker)
 │   ├── mapping.ts      # 컬럼 매핑
 │   ├── normalize.ts    # 데이터 정규화
-│   ├── storage.ts      # IndexedDB 저장소
+│   ├── storage-secure.ts  # IndexedDB 저장소
 │   └── no-network.ts   # 네트워크 차단
 ├── store/              # 상태 관리
 │   └── store.ts        # Zustand 스토어
