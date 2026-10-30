@@ -18,12 +18,10 @@ export function useAppVersion(): string | null {
 export function useBlockStrayFileDrop() {
   useEffect(() => {
     const block = (event: DragEvent) => {
-      // 놓는 칸이 먼저 처리했으면 그대로 둡니다.
-      if (event.defaultPrevented) return;
+      // 놓는 칸이 먼저 처리했거나 파일이 아니면(입력칸에 글자 끌어넣기) 그대로 둡니다.
+      if (event.defaultPrevented || !event.dataTransfer?.types.includes("Files")) return;
       event.preventDefault();
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "none";
-      }
+      event.dataTransfer.dropEffect = "none";
     };
     window.addEventListener("dragover", block);
     window.addEventListener("drop", block);
