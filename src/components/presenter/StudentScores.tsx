@@ -45,21 +45,15 @@ function EvaluationCard({
   isOnly: boolean;
 }) {
   return (
-    <div
-      className="rounded-lg p-6 border flex flex-col items-center"
-      style={{
-        backgroundColor: 'var(--card)',
-        borderColor: 'var(--border)'
-      }}
-    >
-      <div className={`${isOnly ? 'text-3xl md:text-5xl' : 'text-xl md:text-2xl'} font-medium mb-4`} style={{ color: 'var(--card-foreground)' }}>
+    <div className="rounded-card bg-card shadow-card p-6 flex flex-col items-center">
+      <div className={`${isOnly ? 'text-3xl md:text-5xl' : 'text-xl md:text-2xl'} font-semibold text-ink mb-4`}>
         {evaluation.area}
       </div>
-      <div className={`${isOnly ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'} font-bold mb-2`}>
+      <div className={`${isOnly ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'} font-bold text-accent-ink mb-2`}>
         {formatScore(evaluation)}
       </div>
       {hasPercent(evaluation) && (
-        <div className={`${isOnly ? 'text-xl' : 'text-lg'}`} style={{ color: 'var(--muted-foreground)' }}>
+        <div className={`${isOnly ? 'text-xl' : 'text-lg'} text-soft`}>
           {percentOf(evaluation).toFixed(1)}%
         </div>
       )}
@@ -72,7 +66,7 @@ export function StudentScores({ student }: { student: Student }) {
   const textSize = studentTextSize(evaluations.length);
 
   return (
-    <div className="text-center px-8 animate-fade-in w-full max-w-6xl mx-auto" style={{ color: 'var(--foreground)' }}>
+    <div className="text-center text-ink px-8 animate-fade-in w-full max-w-6xl mx-auto">
       {/* 학생 정보 */}
       <div className="mb-8 md:mb-12">
         <h1 className={`${textSize.studentInfo} font-bold mb-2 md:mb-4`}>

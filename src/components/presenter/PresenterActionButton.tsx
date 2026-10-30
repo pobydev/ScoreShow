@@ -5,7 +5,7 @@
 import { CloseIcon } from "../icons";
 
 const BASE_CLASS =
-  "px-4 py-2 rounded-lg text-sm font-medium transition-all backdrop-blur-sm flex items-center gap-2 shadow-lg";
+  "px-4 py-2 rounded-button bg-card text-ink text-small font-semibold shadow-lift transition-colors hover:bg-surface-hover flex items-center gap-2";
 
 export function PresenterActionButton({
   label,
@@ -23,16 +23,6 @@ export function PresenterActionButton({
     <button
       onClick={onClick}
       className={floating ? `fixed top-4 right-4 z-50 ${BASE_CLASS}` : BASE_CLASS}
-      style={{
-        backgroundColor: 'var(--card)',
-        color: 'var(--foreground)'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--accent)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--card)';
-      }}
       aria-label={ariaLabel}
       type="button"
     >
