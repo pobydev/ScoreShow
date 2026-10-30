@@ -1,38 +1,19 @@
 /**
  * 학생 목록의 한 줄
+ * 선택된 줄은 색 외에 왼쪽 막대와 굵은 글자로도 구분합니다.
  */
 
-import type { CSSProperties, Ref } from "react";
+import type { Ref } from "react";
 import type { Student } from "../../types";
-
-function rowStyle(
-  isSelected: boolean,
-  isPresenterMode: boolean
-): CSSProperties | undefined {
-  if (isSelected) {
-    return isPresenterMode
-      ? {
-          backgroundColor: 'var(--sidebar-primary)',
-          color: 'var(--sidebar-primary-foreground)'
-        }
-      : {
-          backgroundColor: 'var(--accent)',
-          color: 'var(--accent-foreground)'
-        };
-  }
-  return isPresenterMode ? { color: 'var(--sidebar-foreground)' } : undefined;
-}
 
 export function StudentRow({
   student,
   isSelected,
-  isPresenterMode,
   rowRef,
   onSelect,
 }: {
   student: Student;
   isSelected: boolean;
-  isPresenterMode: boolean;
   rowRef: Ref<HTMLLIElement>;
   onSelect: () => void;
 }) {
@@ -55,27 +36,20 @@ export function StudentRow({
       tabIndex={0}
       role="button"
       aria-label={`${student.grade}학년 ${student.class}반 ${student.number}번 ${student.name}`}
-      className={`p-3 cursor-pointer transition-colors py-2 my-0 outline-none focus:outline-none ${
-        isSelected ? "font-semibold" : ""
+      className={`px-3 py-2 cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset ${
+        isSelected
+          ? "font-semibold bg-wash text-accent-ink shadow-[inset_3px_0_0_var(--brand)]"
+          : "text-ink hover:bg-surface-hover"
       }`}
-      style={rowStyle(isSelected, isPresenterMode)}
-      onMouseEnter={!isSelected ? (e) => {
-        e.currentTarget.style.backgroundColor = isPresenterMode
-          ? 'var(--sidebar-accent)'
-          : 'var(--accent)';
-      } : undefined}
-      onMouseLeave={!isSelected ? (e) => {
-        e.currentTarget.style.backgroundColor = '';
-      } : undefined}
     >
       <div className="flex items-center justify-between">
-        <span className="font-medium text-sm">
+        <span className="font-semibold text-small">
           {student.grade}학년 {student.class}반 {student.number}번
         </span>
-        <span className="text-sm">{student.name}</span>
+        <span className="text-small">{student.name}</span>
       </div>
       {student.evaluations.length > 0 && (
-        <div className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
+        <div className="text-caption font-normal mt-0.5 text-soft">
           평가 영역: {student.evaluations.length}개
         </div>
       )}

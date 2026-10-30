@@ -27,17 +27,13 @@ export function StudentList({
 
   return (
     <div
-      className="h-full flex flex-col"
-      style={isPresenterMode ? {
-        backgroundColor: 'var(--sidebar)',
-        color: 'var(--sidebar-foreground)'
-      } : {
-        backgroundColor: 'var(--card)'
-      }}
+      className={`h-full flex flex-col bg-card text-ink ${
+        isPresenterMode ? "" : "rounded-card shadow-card overflow-hidden"
+      }`}
     >
       {!isPresenterMode && (
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-bold mb-3">
+        <div className="p-4 border-b border-line">
+          <h2 className="text-title-sm font-bold mb-3">
             학생 목록 ({students.length}명)
           </h2>
           <input
@@ -45,16 +41,7 @@ export function StudentList({
             placeholder="이름 또는 학년 반 번호 검색"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2"
-            style={{
-              borderColor: 'var(--input)'
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--ring)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--input)';
-            }}
+            className="w-full px-3 py-2 text-body bg-card border border-hairline rounded-input focus:outline-none focus:border-ring focus:ring-2"
             aria-label="학생 검색"
           />
         </div>
@@ -65,18 +52,13 @@ export function StudentList({
         }`}
       >
         {filteredStudents.length === 0 ? (
-          <div className="p-4 text-center" style={{ color: 'var(--muted-foreground)' }}>
+          <div className="p-4 text-center text-body text-soft">
             {students.length === 0
               ? "학생 데이터가 없습니다."
               : "검색 결과가 없습니다."}
           </div>
         ) : (
-          <ul
-            className="divide-y"
-            style={{
-              borderColor: isPresenterMode ? 'var(--sidebar-border)' : 'var(--border)'
-            }}
-          >
+          <ul className="divide-y divide-line">
             {filteredStudents.map((student, idx) => {
               // 화이트아웃 시작 시 첫 번째 학생 위에 마커 표시
               const showStartMarker =
@@ -103,7 +85,6 @@ export function StudentList({
                     key={student.id}
                     student={student}
                     isSelected={!isInBlackout && selectedStudentId === student.id}
-                    isPresenterMode={isPresenterMode}
                     rowRef={(el) => {
                       if (el) {
                         studentRefs.current.set(student.id, el);

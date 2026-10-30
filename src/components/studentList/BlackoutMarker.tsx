@@ -9,23 +9,11 @@ export function BlackoutMarker({ label }: { label: string }) {
       className="flex items-center justify-center my-0 py-0"
       style={{ lineHeight: 0, padding: 0 }}
     >
-      <div
-        className="relative w-5/6 h-0.5 rounded-full border opacity-60 flex items-center justify-center"
-        style={{
-          backgroundColor: 'var(--primary)',
-          borderColor: 'var(--ring)'
-        }}
-      >
-        <span
-          className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs select-none leading-none"
-          style={{ color: 'var(--primary)' }}
-        >
+      <div className="relative w-5/6 h-0.5 rounded-full bg-brand flex items-center justify-center">
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-caption select-none leading-none text-brand">
           ▲
         </span>
-        <span
-          className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs select-none leading-none"
-          style={{ color: 'var(--primary)' }}
-        >
+        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-caption select-none leading-none text-brand">
           ▼
         </span>
       </div>
