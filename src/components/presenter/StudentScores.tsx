@@ -1,6 +1,7 @@
 /**
  * 발표 화면 가운데: 학생 정보와 평가 카드
  * 평가 영역 수에 따라 글씨 크기와 칸 수가 달라집니다.
+ * 창이 작으면 index.css의 presenter-stage가 전체를 함께 줄입니다.
  */
 
 import type { Evaluation, Student } from "../../types";
@@ -45,11 +46,11 @@ function EvaluationCard({
   isOnly: boolean;
 }) {
   return (
-    <div className="rounded-card bg-card shadow-card p-6 flex flex-col items-center">
+    <div className={`${isOnly ? '' : 'presenter-card-tight'} rounded-card bg-card shadow-card p-6 flex flex-col items-center min-w-0`}>
       <div className={`${isOnly ? 'text-3xl md:text-5xl' : 'text-xl md:text-2xl'} font-semibold text-ink mb-4`}>
         {evaluation.area}
       </div>
-      <div className={`${isOnly ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'} font-bold text-accent-ink mb-2`}>
+      <div className={`presenter-card-score ${isOnly ? 'text-8xl md:text-9xl' : 'text-4xl md:text-5xl'} font-bold text-accent-ink mb-2`}>
         {formatScore(evaluation)}
       </div>
       {hasPercent(evaluation) && (
@@ -66,7 +67,7 @@ export function StudentScores({ student }: { student: Student }) {
   const textSize = studentTextSize(evaluations.length);
 
   return (
-    <div className="text-center text-ink px-8 animate-fade-in w-full max-w-6xl mx-auto">
+    <div className="presenter-stage text-center text-ink px-6 animate-fade-in w-full max-w-6xl">
       {/* 학생 정보 */}
       <div className="mb-8 md:mb-12">
         <h1 className={`${textSize.studentInfo} font-bold mb-2 md:mb-4`}>
@@ -79,16 +80,14 @@ export function StudentScores({ student }: { student: Student }) {
       </div>
 
       {/* 평가 영역들 */}
-      <div className="mb-12">
-        <div className={`grid gap-4 md:gap-6 ${gridColumns(evaluations.length)}`}>
-          {evaluations.map((evaluation, index) => (
-            <EvaluationCard
-              key={index}
-              evaluation={evaluation}
-              isOnly={evaluations.length === 1}
-            />
-          ))}
-        </div>
+      <div className={`grid gap-4 md:gap-6 ${gridColumns(evaluations.length)}`}>
+        {evaluations.map((evaluation, index) => (
+          <EvaluationCard
+            key={index}
+            evaluation={evaluation}
+            isOnly={evaluations.length === 1}
+          />
+        ))}
       </div>
     </div>
   );

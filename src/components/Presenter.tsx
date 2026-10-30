@@ -14,25 +14,12 @@ import { StudentScores } from "./presenter/StudentScores";
 import { useFullscreen } from "./presenter/useFullscreen";
 import { usePresenterKeyboard } from "./presenter/usePresenterKeyboard";
 
-const FADE_IN_CSS = `
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.4s ease-out;
-        }
-      `;
+// 좁은 창에서는 목록이 학생 화면을 덮으므로 접은 채 시작합니다.
+const startsExpanded = () => typeof window === "undefined" || window.innerWidth >= 768;
 
 export function Presenter() {
   const { students, selectedStudentId, isBlackout, setPresenterMode } = useStore();
-  const [isListExpanded, setIsListExpanded] = useState(true);
+  const [isListExpanded, setIsListExpanded] = useState(startsExpanded);
   const { isFullscreen, toggleFullscreen, exitFullscreen } = useFullscreen();
 
   const currentIndex = selectedStudentId
@@ -51,103 +38,55 @@ export function Presenter() {
     onToggleFullscreen: toggleFullscreen,
   });
 
-  // 아래 세 화면은 자식 순서를 맞춰 두어야 화면이 바뀌어도 목록과 스크롤 위치가 유지됩니다.
+  let stage;
   if (isBlackout) {
-    return (
-      <div className="fixed inset-0 z-50 flex bg-canvas">
-        {/* 우측 상단 종료 버튼 (블랙아웃 상태에서도 표시) */}
-        <PresenterActionButton
-          floating
-          label="발표모드 종료"
-          ariaLabel="발표 모드 종료"
-          onClick={exitPresenter}
-        />
-
-        {/* 좌측: 학생 리스트 */}
-        <PresenterSidebar isExpanded={isListExpanded} onExpandedChange={setIsListExpanded}>
-          <StudentList blackoutBetweenIdx={currentIndex} pendingDirection={pendingDirection ?? undefined} />
-        </PresenterSidebar>
-
-        {/* 우측: 화이트아웃 메시지 */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-xl md:text-2xl text-soft">
-            {!selectedStudentId
-              ? "화살표 키(←→↑↓)를 누르면 다음 학생으로 이동"
-              : "화살표 키(←→↑↓)를 누르면 전후 학생으로 이동"}
-          </div>
-        </div>
+    stage = (
+      <div className="text-xl md:text-2xl text-soft text-center px-8">
+        {!selectedStudentId
+          ? "화살표 키(←→↑↓)를 누르면 다음 학생으로 이동"
+          : "화살표 키(←→↑↓)를 누르면 전후 학생으로 이동"}
       </div>
     );
-  }
-
-  if (!selectedStudent || selectedStudent.evaluations.length === 0) {
-    return (
-      <div className="fixed inset-0 z-50 flex bg-canvas">
-        {/* 우측 상단 종료 버튼 */}
-        <PresenterActionButton
-          floating
-          label="발표모드 종료"
-          ariaLabel="발표 모드 종료"
-          onClick={exitPresenter}
-        />
-
-        {/* 좌측: 학생 리스트 */}
-        <PresenterSidebar isExpanded={isListExpanded} onExpandedChange={setIsListExpanded}>
-          <StudentList />
-        </PresenterSidebar>
-
-        {/* 우측: 안내 메시지 */}
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-xl text-ink">표시할 데이터가 없습니다.</p>
-        </div>
-      </div>
-    );
+  } else if (!selectedStudent || selectedStudent.evaluations.length === 0) {
+    stage = <p className="text-xl text-ink">표시할 데이터가 없습니다.</p>;
+  } else {
+    stage = <StudentScores student={selectedStudent} />;
   }
 
   return (
     <div className="fixed inset-0 z-50 flex bg-canvas">
-      {/* 우측 상단 버튼들 */}
-      <div className="fixed top-4 right-4 z-50 flex gap-2">
-        {/* 전체화면 해제 버튼 (전체화면일 때만 표시) */}
-        {isFullscreen && (
-          <PresenterActionButton
-            label="전체화면 해제"
-            ariaLabel="전체화면 해제"
-            onClick={toggleFullscreen}
-          />
-        )}
-        {/* 발표 모드 종료 버튼 */}
-        <PresenterActionButton
-          label="발표모드 종료"
-          ariaLabel="발표 모드 종료"
-          onClick={exitPresenter}
-        />
-      </div>
-
-      {/* 좌측: 학생 리스트 */}
+      {/* 좌측: 학생 리스트. 화면이 바뀌어도 같은 자리에 남아 스크롤 위치가 유지됩니다. */}
       <PresenterSidebar isExpanded={isListExpanded} onExpandedChange={setIsListExpanded}>
-        <StudentList />
+        <StudentList
+          blackoutBetweenIdx={isBlackout ? currentIndex : undefined}
+          pendingDirection={isBlackout ? pendingDirection ?? undefined : undefined}
+        />
       </PresenterSidebar>
 
-      {/* 우측: 학생 정보 */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <StudentScores student={selectedStudent} />
+      {/* 우측: 학생 화면 */}
+      <main className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-shrink-0 flex flex-wrap justify-end gap-2 p-4">
+          {/* 전체화면 해제 버튼 (전체화면일 때만 표시) */}
+          {isFullscreen && (
+            <PresenterActionButton label="전체화면 해제" onClick={toggleFullscreen} />
+          )}
+          {/* 발표 모드 종료 버튼 */}
+          <PresenterActionButton label="발표 종료" onClick={exitPresenter} />
         </div>
 
-        {/* 하단 단축키 안내 - 고정 위치 */}
-        <div
-          className={`absolute bottom-8 right-0 text-small text-soft flex justify-center gap-4 flex-wrap pointer-events-none transition-all duration-300 ${
-            isListExpanded ? "left-64" : "left-0"
-          }`}
-        >
-          <span>← → ↑ ↓ : 이동</span>
-          <span>F : {isFullscreen ? "전체화면 해제" : "전체화면"}</span>
-          <span>Esc : 종료</span>
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex">
+          <div className="m-auto w-full flex justify-center">{stage}</div>
         </div>
-      </div>
 
-      <style>{FADE_IN_CSS}</style>
+        {/* 하단 단축키 안내 */}
+        {!isBlackout && (
+          <div className="flex-shrink-0 py-3 px-4 text-small text-soft flex justify-center gap-x-4 flex-wrap">
+            <span>← → ↑ ↓ : 이동</span>
+            <span>F : {isFullscreen ? "전체화면 해제" : "전체화면"}</span>
+            <span>Esc : 종료</span>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
