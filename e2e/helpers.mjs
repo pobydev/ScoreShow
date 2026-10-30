@@ -250,7 +250,8 @@ export function ui(page) {
     filePick: button(/파일 선택|다른 파일 열기/).or(page.getByLabel("Select spreadsheet file")).first(),
     /** 파일을 놓는 곳: 새 화면의 놓는 칸, 없으면 파일 입력칸 */
     dropTarget: page.locator('[data-dropzone="true"]').or(page.getByLabel("Select spreadsheet file")).first(),
-    template: button(/Download Template|표준 서식 받기/).first(),
+    /** 안내 창이 열려 있으면 창 안의 것이 뒤에 옵니다. */
+    template: button(/Download Template|표준 서식 받기/).last(),
     guide: button(/^사용 안내$/).first(),
     search: page.getByLabel("학생 검색"),
     rows: page.locator('li[role="button"]'),
