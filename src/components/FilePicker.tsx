@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { useStore } from "../store/store";
 import type { ColumnMapping } from "../types";
 import { TEMPLATE_DOWNLOAD_URLS, TEMPLATE_FILE_NAME } from "../core/template";
+import { loadedMessage } from "./app/loadMessages";
 
 export function FilePicker() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +72,7 @@ export function FilePicker() {
         if (success) {
           await setStudents(students);
           setMapping(mapping ?? null);
-          setError(`Loaded ${students.length} students successfully.`);
+          setError(loadedMessage(students.length));
           setTimeout(() => {
             setError(null);
           }, 3000);
