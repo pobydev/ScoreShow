@@ -133,22 +133,22 @@ describe("일반 표의 이상 동작", () => {
     expect(students.map((s) => s.number)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
   });
 
-  it("[Q-18] 2025학년도 제목만 있으면 A열 반/번호의 반을 학년으로 읽는다", async () => {
+  it("[Q-18] 2025학년도 제목만 있으면 반을 학년으로 읽지 않고 1학년으로 둔다", async () => {
     const students = await parseRows([
       ["2025학년도"],
       ["반/번호", "성명", "평가영역", "점수", "만점"],
       ["3/1", "김가상", "독서", 8, 10],
     ]);
-    expect(students[0].id).toBe("3-3-1");
+    expect(students[0].id).toBe("1-3-1");
   });
 
-  it("[Q-18] 7학년처럼 1에서 6을 벗어난 표기도 같은 경로를 탄다", async () => {
+  it("[Q-18] 7학년 표기가 반/번호 칸 위에 있어도 반을 학년으로 읽지 않는다", async () => {
     const students = await parseRows([
       ["7학년"],
       ["반/번호", "성명", "평가영역", "점수", "만점"],
       ["3/1", "김가상", "독서", 8, 10],
     ]);
-    expect(students[0].id).toBe("3-3-1");
+    expect(students[0].id).toBe("1-3-1");
   });
 
   it("[Q-22] 만점 컬럼이 없으면 점수, 0점이면 0, 빈칸이면 100이 만점이 된다", async () => {

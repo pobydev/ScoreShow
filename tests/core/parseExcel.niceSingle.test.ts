@@ -229,13 +229,13 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(students.map((s) => s.id)).toEqual(["1-1-2", "1-1-3", "1-2-1"]);
   });
 
-  it("[Q-06] 이름에 결시 낱말이 들어 있으면 점수가 지워진다", async () => {
+  it("[Q-06] 이름에 결시 낱말이 들어 있어도 점수를 지우지 않는다", async () => {
     const students = await parseRows([
       META,
       TABLE_HEADER,
       ["1/1", "유예가상", 8, ""],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 유예가상 | 듣기:null/10"]);
+    expect(summarize(students)).toEqual(["1-1-1 유예가상 | 듣기:8/10"]);
   });
 
   it("[Q-20] 표 어느 칸의 N학년 표기든 전체 학생의 학년을 덮어쓴다", async () => {

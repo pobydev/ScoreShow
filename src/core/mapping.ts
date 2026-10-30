@@ -8,7 +8,7 @@ import type { ColumnMapping } from "../types";
 export type { ColumnMapping };
 
 export const MAPPING_PATTERNS = {
-  grade: /학년|grade/i,
+  grade: /학년(?!도)|grade/i,
   class: /반.*번호|반\/번호|class/i,
   number: /번호|번|student[_\s]?no/i,
   name: /이름|성명|name/i,

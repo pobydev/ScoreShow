@@ -72,8 +72,8 @@ describe("autoDetectMapping", () => {
     expect(autoDetectMapping([["score", "area", "max"]])).toEqual({});
   });
 
-  it("[Q-18] 2025학년도 같은 제목도 학년 컬럼으로 잡는다", () => {
-    expect(autoDetectMapping([["2025학년도"], ["", "이름"]]).grade).toBe(0);
+  it("[Q-18] 2025학년도 같은 제목은 학년 컬럼으로 잡지 않는다", () => {
+    expect(autoDetectMapping([["2025학년도"], ["", "이름"]]).grade).toBeUndefined();
   });
 
   it("[Q-28] 데이터 행의 값도 헤더처럼 검색한다", () => {

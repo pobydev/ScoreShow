@@ -400,6 +400,10 @@ self.onmessage = async function (
       mapping = providedMapping;
     } else {
       mapping = autoDetectMapping(headerRows);
+      // 표 위 제목이 같은 열에 있어 학년 칸으로 잡혔을 뿐 반/번호 칸을 학년으로 읽으면 안 됩니다.
+      if (mapping.grade !== undefined && mapping.grade === mapping.class) {
+        delete mapping.grade;
+      }
     }
 
     // 디버깅: 매핑 결과 로그
@@ -1427,6 +1431,8 @@ self.onmessage = async function (
         for (let col = 0; col < rawRowData.length; col++) {
           // 점수 컬럼은 제외 (점수 컬럼에 '전출'이 있을 수도 있음)
           if (col === mapping.score) continue;
+          // 이름 컬럼도 제외 (이름에 결시 낱말이 들어 있을 수 있음)
+          if (col === mapping.name) continue;
           
           const cellValue = rawRowData[col] || "";
           const trimmed = cellValue.toString().trim();
