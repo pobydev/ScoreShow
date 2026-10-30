@@ -1,0 +1,43 @@
+/**
+ * 발표 화면 우측 상단의 닫기 모양 버튼
+ */
+
+import { CloseIcon } from "../icons";
+
+const BASE_CLASS =
+  "px-4 py-2 rounded-lg text-sm font-medium transition-all backdrop-blur-sm flex items-center gap-2 shadow-lg";
+
+export function PresenterActionButton({
+  label,
+  ariaLabel,
+  floating = false,
+  onClick,
+}: {
+  label: string;
+  ariaLabel: string;
+  /** 다른 버튼과 묶이지 않을 때 스스로 우측 상단에 고정합니다. */
+  floating?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={floating ? `fixed top-4 right-4 z-50 ${BASE_CLASS}` : BASE_CLASS}
+      style={{
+        backgroundColor: 'var(--card)',
+        color: 'var(--foreground)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--accent)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--card)';
+      }}
+      aria-label={ariaLabel}
+      type="button"
+    >
+      <CloseIcon className="w-4 h-4" />
+      <span>{label}</span>
+    </button>
+  );
+}
