@@ -6,15 +6,17 @@ import type { Evaluation } from "../../types";
 import { formatScore, hasPercent, percentOf } from "../scoreText";
 
 export function EvaluationSummary({ evaluation }: { evaluation: Evaluation }) {
+  const isEmpty = evaluation.score === null;
+
   return (
-    <>
-      <div className="font-semibold text-small text-ink mb-1">{evaluation.area}</div>
-      <div className="text-title font-bold text-accent-ink mb-2">
+    <div className="grid gap-1.5">
+      <div className="font-semibold text-body text-ink">{evaluation.area}</div>
+      <div className={isEmpty ? "text-title font-bold text-soft" : "text-display font-bold text-accent-ink"}>
         {formatScore(evaluation)}
       </div>
       {hasPercent(evaluation) && (
-        <div>
-          <div className="w-full rounded-full h-1.5 mb-1 bg-surface-hover">
+        <>
+          <div className="w-full rounded-full h-1.5 bg-surface-hover overflow-hidden">
             <div
               className="h-1.5 rounded-full transition-all bg-brand"
               style={{ width: `${percentOf(evaluation)}%` }}
@@ -23,8 +25,14 @@ export function EvaluationSummary({ evaluation }: { evaluation: Evaluation }) {
           <p className="text-caption text-soft">
             {percentOf(evaluation).toFixed(1)}%
           </p>
-        </div>
+        </>
       )}
-    </>
+      {isEmpty && (
+        <>
+          <div className="w-full rounded-full h-1.5 bg-surface-hover" />
+          <p className="text-caption text-soft">점수 없음</p>
+        </>
+      )}
+    </div>
   );
 }

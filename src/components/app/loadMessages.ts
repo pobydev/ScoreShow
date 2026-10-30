@@ -1,10 +1,11 @@
 /**
  * 파일 불러오기 결과 문구
- * StatusMessage는 "✅"로 시작하는 문구를 성공 색으로 보여 줍니다.
+ * 색만으로 구분하지 않도록 성공 문구 앞에 기호를 붙이고, StatusMessage는 이 기호로 색을 정합니다.
  */
 
 import type { ScoreIssue } from "../../core/normalize";
 
+const SUCCESS_MARK = "✓";
 const MAX_LISTED_STUDENTS = 10;
 
 const SPREADSHEET_TYPES = [
@@ -18,7 +19,7 @@ export function uploadRejection(file: { name: string; type: string }): string | 
     return "CSV는 읽지 않습니다. 엑셀 파일로 저장해 주세요.";
   }
   if (!SPREADSHEET_TYPES.includes(file.type) && !/\.(xlsx|xls)$/i.test(file.name)) {
-    return "Unsupported format: .xlsx, .xls";
+    return "지원하지 않는 형식입니다. .xlsx, .xls 파일을 올려 주세요.";
   }
   return null;
 }
@@ -42,10 +43,14 @@ export function loadedMessage(
   issues: ScoreIssue[] = [],
   areasWithoutMax: string[] = []
 ) {
-  const parts = [`✅ Loaded ${count} students successfully.`];
+  const parts = [`${SUCCESS_MARK} 학생 ${count}명을 불러왔습니다.`];
   if (issues.length > 0) parts.push(issueText(issues));
   if (areasWithoutMax.length > 0) {
     parts.push(`만점을 찾지 못해 100점으로 둔 영역: ${areasWithoutMax.join(", ")}`);
   }
   return parts.join(" ");
+}
+
+export function isSuccessMessage(message: string) {
+  return message.startsWith(SUCCESS_MARK);
 }

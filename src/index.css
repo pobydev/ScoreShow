@@ -59,6 +59,12 @@
     background: var(--canvas);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  dialog::backdrop {
+    background: var(--overlay);
   }
 
   ::selection {
@@ -77,7 +83,6 @@
   }
 
   p {
-    word-break: keep-all;
     text-wrap: pretty;
   }
 }
@@ -87,6 +92,47 @@
   height: 100vh;
   background: var(--canvas);
   overflow: hidden;
+}
+
+/* 발표 화면 등장 효과 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+/* 발표 화면은 큰 글씨가 기준입니다. 그대로는 들어가지 않는 작은 창에서만 전체를 같은 비율로 줄입니다. */
+@media (max-width: 900px), (max-height: 680px) {
+  .presenter-stage {
+    zoom: 0.72;
+  }
+  /* 카드가 여러 칸이면 "12.5 / 20"이 한 줄에 들어가도록 카드 안쪽을 더 줄입니다. */
+  .presenter-card-tight {
+    padding: 12px;
+  }
+  .presenter-card-tight .presenter-card-score {
+    font-size: 36px;
+    line-height: 40px;
+  }
+}
+@media (max-width: 560px) {
+  .presenter-stage {
+    zoom: 0.6;
+  }
+}
+/* Electron 최소 창의 화면 높이가 538px입니다. 카드가 세 줄인 학생만 더 줄입니다. */
+@media (max-height: 540px) {
+  .presenter-stage-dense {
+    zoom: 0.6;
+  }
 }
 
 /* 스크롤바 스타일링 */

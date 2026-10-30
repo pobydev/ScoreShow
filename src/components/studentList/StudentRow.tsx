@@ -8,11 +8,13 @@ import type { Student } from "../../types";
 
 export function StudentRow({
   student,
+  showClass,
   isSelected,
   rowRef,
   onSelect,
 }: {
   student: Student;
+  showClass: boolean;
   isSelected: boolean;
   rowRef: Ref<HTMLLIElement>;
   onSelect: () => void;
@@ -36,22 +38,21 @@ export function StudentRow({
       tabIndex={0}
       role="button"
       aria-label={`${student.grade}학년 ${student.class}반 ${student.number}번 ${student.name}`}
-      className={`px-3 py-2 cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset ${
+      className={`flex items-baseline gap-2 px-2.5 py-2 rounded-input text-body cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset ${
         isSelected
           ? "font-semibold bg-wash text-accent-ink shadow-[inset_3px_0_0_var(--brand)]"
           : "text-ink hover:bg-surface-hover"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-small">
-          {student.grade}학년 {student.class}반 {student.number}번
-        </span>
-        <span className="text-small">{student.name}</span>
-      </div>
+      <span className={`flex-shrink-0 ${isSelected ? "" : "text-soft"}`}>
+        {showClass && `${student.grade}학년 ${student.class}반 `}
+        {student.number}번
+      </span>
+      <span className="min-w-0 truncate">{student.name}</span>
       {student.evaluations.length > 0 && (
-        <div className="text-caption font-normal mt-0.5 text-soft">
-          평가 영역: {student.evaluations.length}개
-        </div>
+        <span className="ml-auto flex-shrink-0 text-caption font-normal text-soft">
+          영역 {student.evaluations.length}개
+        </span>
       )}
     </li>
   );

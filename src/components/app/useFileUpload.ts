@@ -1,19 +1,36 @@
 /**
- * Spreadsheet upload component.
+ * 파일 올리기와 표준 서식 받기
+ * 입력칸은 App에 하나만 두고, 시작 화면과 사이드바의 버튼이 함께 씁니다.
  */
 
-import { useRef, useState } from "react";
-import { useStore } from "../store/store";
-import type { ColumnMapping } from "../types";
-import type { ScoreIssue } from "../core/normalize";
-import { TEMPLATE_FILE_NAME } from "../core/template";
-import { loadedMessage, uploadRejection } from "./app/loadMessages";
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useStore } from "../../store/store";
+import type { ColumnMapping } from "../../types";
+import type { ScoreIssue } from "../../core/normalize";
+import { TEMPLATE_FILE_NAME } from "../../core/template";
+import { loadedMessage, uploadRejection } from "./loadMessages";
 
-export function FilePicker() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+/** 파일 해석 라이브러리나 브라우저의 영어 오류를 그대로 보이지 않습니다. */
+function readableError(message: string | undefined) {
+  return message && /[가-힣]/.test(message)
+    ? message
+    : "파일을 읽지 못했습니다. 파일이 손상되지 않았는지 확인해 주세요.";
+}
+
+export function useFileUpload() {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  // 파일 이름은 메모리에만 둡니다. 암호화 저장소 밖에 평문으로 남기지 않습니다.
+  const [fileName, setFileName] = useState<string | null>(null);
   const { setLoading, setError, setStudents, setMapping } = useStore();
   const hasStudents = useStore((state) => state.students.length > 0);
+
+  useEffect(() => {
+    if (!hasStudents) {
+      setFileName(null);
+    }
+  }, [hasStudents]);
 
   // 외부 통신 없이 앱에 들어 있는 파일을 받습니다.
   const fetchBundledTemplate = async (): Promise<Blob> => {
@@ -25,16 +42,10 @@ export function FilePicker() {
     return response.blob();
   };
 
-  const handleFileSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const handleFile = async (file: File) => {
     const rejection = uploadRejection(file);
     if (rejection) {
       setError(rejection);
-      event.target.value = "";
       return;
     }
 
@@ -44,7 +55,7 @@ export function FilePicker() {
 
     try {
       const worker = new Worker(
-        new URL("../core/parseExcel.worker.ts", import.meta.url),
+        new URL("../../core/parseExcel.worker.ts", import.meta.url),
         { type: "module" }
       );
 
@@ -70,6 +81,7 @@ export function FilePicker() {
         if (success) {
           await setStudents(students);
           setMapping(mapping ?? null);
+          setFileName(file.name);
           if (scoreIssues.length > 0 || areasWithoutMax.length > 0) {
             // 교사가 학생 번호와 영역을 읽고 찾아볼 수 있도록 오래 보여 줍니다.
             setError(loadedMessage(students.length, scoreIssues, areasWithoutMax), 15000);
@@ -80,7 +92,7 @@ export function FilePicker() {
             }, 3000);
           }
         } else {
-          setError(error || "Failed to parse the selected file.");
+          setError(readableError(error));
         }
 
         setIsProcessing(false);
@@ -89,23 +101,28 @@ export function FilePicker() {
       };
 
       worker.onerror = (error) => {
-        setError(`File processing error: ${error.message}`);
+        setError(readableError(error.message));
         setIsProcessing(false);
         setLoading(false);
         worker.terminate();
       };
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Unknown error");
+      setError(readableError(error instanceof Error ? error.message : undefined));
       setIsProcessing(false);
       setLoading(false);
     }
+  };
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // 같은 파일을 다시 골라도 변경으로 알아채도록 비웁니다.
+    event.target.value = "";
+    if (file) {
+      handleFile(file);
     }
   };
 
-  const handleDownloadTemplate = async () => {
+  const downloadTemplate = async () => {
     try {
       let blob: Blob;
 
@@ -137,43 +154,19 @@ export function FilePicker() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Template download failed:", error);
-      setError("Template download failed.");
+      setError("표준 서식을 받지 못했습니다.");
     }
   };
 
-  return (
-    <div className="rounded-card shadow-card bg-card px-4 py-3">
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-small font-semibold whitespace-nowrap text-ink">
-          Spreadsheet:
-        </label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleFileSelect}
-          disabled={isProcessing}
-          className={`text-small text-soft file:mr-3 file:py-2 file:px-4 file:rounded-button file:text-small file:font-semibold file:cursor-pointer file:transition-colors disabled:opacity-50 ${
-            hasStudents
-              ? "file:border file:border-solid file:border-hairline file:bg-card file:text-ink hover:file:bg-wash hover:file:border-ring"
-              : "file:border-0 file:bg-accent file:text-white hover:file:bg-accent-hover"
-          }`}
-          aria-label="Select spreadsheet file"
-        />
-        <button
-          type="button"
-          onClick={handleDownloadTemplate}
-          className="text-small font-semibold inline-flex items-center justify-center gap-2 rounded-button border border-hairline bg-card text-ink px-3 py-2 transition-colors hover:bg-wash hover:border-ring"
-        >
-          Download Template
-        </button>
-        {isProcessing && (
-          <div className="flex items-center gap-2 text-accent-ink">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand" />
-            <span className="text-caption">Processing...</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return {
+    inputRef,
+    isProcessing,
+    fileName,
+    handleFile,
+    handleInputChange,
+    openFilePicker: () => inputRef.current?.click(),
+    downloadTemplate,
+  };
 }
+
+export type FileUpload = ReturnType<typeof useFileUpload>;

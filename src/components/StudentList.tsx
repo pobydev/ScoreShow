@@ -23,31 +23,28 @@ export function StudentList({
     [students, searchQuery]
   );
 
+  // 한 반만 있으면 줄에는 번호만 적고, 여러 반이 섞여 있으면 학년과 반까지 적습니다.
+  const showClass = useMemo(
+    () => new Set(students.map((s) => `${s.grade}-${s.class}`)).size > 1,
+    [students]
+  );
+
   const isInBlackout = isPresenterMode && typeof blackoutBetweenIdx === "number";
 
   return (
-    <div
-      className={`h-full flex flex-col bg-card text-ink ${
-        isPresenterMode ? "" : "rounded-card shadow-card overflow-hidden"
-      }`}
-    >
+    <div className="h-full flex flex-col gap-2.5 text-ink">
       {!isPresenterMode && (
-        <div className="p-4 border-b border-line">
-          <h2 className="text-title-sm font-bold mb-3">
-            학생 목록 ({students.length}명)
-          </h2>
-          <input
-            type="text"
-            placeholder="이름 또는 학년 반 번호 검색"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 text-body bg-card border border-hairline rounded-input focus:outline-none focus:border-ring focus:ring-2"
-            aria-label="학생 검색"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="이름 또는 번호 검색"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-shrink-0 w-full h-9 px-2.5 text-small bg-card border border-hairline rounded-input focus:outline-none focus:border-ring focus:ring-2"
+          aria-label="학생 검색"
+        />
       )}
       <div
-        className={`flex-1 ${
+        className={`flex-1 min-h-0 ${
           isPresenterMode ? "" : "overflow-y-auto custom-scrollbar"
         }`}
       >
@@ -58,7 +55,7 @@ export function StudentList({
               : "검색 결과가 없습니다."}
           </div>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="flex flex-col gap-0.5" aria-label="학생 목록">
             {filteredStudents.map((student, idx) => {
               // 화이트아웃 시작 시 첫 번째 학생 위에 마커 표시
               const showStartMarker =
@@ -84,6 +81,7 @@ export function StudentList({
                   <StudentRow
                     key={student.id}
                     student={student}
+                    showClass={showClass}
                     isSelected={!isInBlackout && selectedStudentId === student.id}
                     rowRef={(el) => {
                       if (el) {
