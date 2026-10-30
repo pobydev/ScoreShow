@@ -87,11 +87,11 @@ describe("호출자가 준 매핑", () => {
     expect(result).toMatchObject({ success: true, mapping: { name: 2, score: 4 } });
   });
 
-  it("[Q-09] 반과 번호 컬럼을 직접 지정해도 앞쪽 15행은 헤더로 취급해 읽지 않는다", async () => {
+  it("[Q-09] 반과 번호 컬럼을 직접 지정하면 숫자가 나오는 줄부터 읽는다", async () => {
     const rows: Rows = [["학년", "반", "번호", "이름", "점수"]];
     for (let i = 1; i <= 20; i++) rows.push([2, 1, i, "김가상", 8]);
     const students = await parseRows(rows, { grade: 0, class: 1, number: 2, name: 3, score: 4 });
-    expect(students.map((s) => s.number)).toEqual([15, 16, 17, 18, 19, 20]);
+    expect(students.map((s) => s.number)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
   });
 });
 

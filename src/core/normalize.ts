@@ -11,7 +11,7 @@ export interface ScoreIssue {
   number: number;
 }
 
-const ABSENCE_KEYWORDS = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+export const ABSENCE_KEYWORDS = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
 
 /**
  * 점수 문자열을 숫자로 파싱합니다.
@@ -100,7 +100,7 @@ function parseMaxScore(maxScoreStr: string | undefined): number | null {
 /**
  * 이름 정규화 (공백 제거, 전각 문자 처리)
  */
-function normalizeName(name: string | undefined): string {
+export function normalizeName(name: string | undefined): string {
   if (!name) return "";
   return name
     .trim()

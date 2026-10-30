@@ -194,21 +194,26 @@ describe("구조로 영역 찾기", () => {
     expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/10 토론:7/100"]);
   });
 
-  it("아직 점수를 넣지 않은 칸은 영역 낱말이 있을 때만 미입력으로 남긴다", async () => {
+  it("아직 점수를 넣지 않은 칸은 만점 표기가 있을 때만 미입력으로 남긴다", async () => {
     const students = await parseRows([
-      ["반/번호", "성명", "문법", "듣기", "토론"],
+      ["반/번호", "성명", "문법", "듣기 (만점 10)", "토론"],
       ["1/1", "김가상", 8, "", ""],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/100 듣기:null/100"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/100 듣기:null/10"]);
   });
 
-  it("반/번호 줄에서 영역을 못 찾으면 낱말 목록으로 찾는다", async () => {
-    const students = await parseRows([
-      ["", "", "듣기"],
-      ["반/번호", "성명", ""],
-      ["1/1", "김가상", 8],
-    ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/100"]);
+  it("반/번호 줄 밖의 낱말로 영역을 추측하지 않고 실패로 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["", "", "듣기"],
+        ["반/번호", "성명", ""],
+        ["1/1", "김가상", 8],
+      ])
+    );
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining("점수를 찾지 못했습니다"),
+    });
   });
 
   it("점수나 평가영역 칸이 있는 표는 일반 표로 읽는다", async () => {
@@ -319,12 +324,21 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/10 발표:7/10"]);
   });
 
-  it("[Q-19] 학년 컬럼을 읽지 않고 N학년 표기가 없으면 1학년이 된다", async () => {
+  it("[Q-20] 학생 줄의 N학년 표기가 학년을 바꾸지 않는다", async () => {
+    const students = await parseRows([
+      ["2학년 1강의실"],
+      ["반/번호", "성명", "말하기", "비고"],
+      ["1/1", "김가상", 8, "3학년 재평가"],
+    ]);
+    expect(students[0].id).toBe("2-1-1");
+  });
+
+  it("[Q-19] 학년 칸이 있으면 그 값을 읽는다", async () => {
     const students = await parseRows([
       ["학년", "반/번호", "성명", "말하기"],
       [3, "1/1", "김가상", 8],
     ]);
-    expect(students[0].id).toBe("1-1-1");
+    expect(students[0].id).toBe("3-1-1");
   });
 
   it("[Q-21] 제목의 영역 낱말을 영역 열로 오인하지 않고 점수 칸을 읽는다", async () => {

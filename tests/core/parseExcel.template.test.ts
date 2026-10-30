@@ -126,6 +126,20 @@ describe("표준 템플릿", () => {
     expect(summarize(students)[1]).toBe("2-1-2 이가상 | 영역1:8/10");
   });
 
+  it("만점 칸의 8/10과 6,50은 점수와 같은 규칙으로 읽는다", async () => {
+    const students = await parseTemplate(
+      [
+        [2, 1, 1, "김가상", 5, "8/10"],
+        [2, 1, 2, "이가상", 5, "6,50"],
+      ],
+      NAMED_HEADER
+    );
+    expect(summarize(students)).toEqual([
+      "2-1-1 김가상 | 쓰기1:5/8",
+      "2-1-2 이가상 | 쓰기1:5/6.5",
+    ]);
+  });
+
   it("마지막 만점 칸까지 있어야 영역으로 인식한다", async () => {
     const students = await parseStudents(
       toWorkbookBytes([

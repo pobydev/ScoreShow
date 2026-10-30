@@ -198,12 +198,15 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(summarize(students)).toEqual(["1-1-7 김가상 | 듣기:8/10", "1-1-8 1/8 | 듣기:9/10"]);
   });
 
-  it("[Q-01] 그 학생 줄을 덮는 병합은 지금처럼 첫 칸 값을 읽는다", async () => {
+  it("[Q-01] 학생 줄의 병합에서도 빈 점수 칸에 다른 칸의 값을 빌려 오지 않는다", async () => {
     const students = await parseRows(
-      [["제목", "", "", ""], META, TABLE_HEADER, ["1/1", "김가상", "", ""]],
+      [["제목", "", "", ""], META, TABLE_HEADER, ["1/1", "김가상", "", ""], ["1/2", "이가상", 7, ""]],
       ["A4:C4"]
     );
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:1/10"]);
+    expect(summarize(students)).toEqual([
+      "1-1-1 김가상 | 듣기:null/10",
+      "1-1-2 이가상 | 듣기:7/10",
+    ]);
   });
 
   it("[Q-02] 헤더 바로 아래가 1/1이고 20행 안에 다음 반이 있어도 앞 반을 읽는다", async () => {
@@ -277,7 +280,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-24] 영역만점이 세 행 이상 떨어지면 A열 값으로 만점을 읽는다", async () => {
+  it("[Q-24] 영역만점이 세 행 이상 떨어져도 안내 줄에서 만점을 읽는다", async () => {
     const students = await parseRows([
       ["영역 : 듣기"],
       ["메모"],
@@ -286,7 +289,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ["반/번호", "성명", "점수"],
       ["1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:null/1"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/20"]);
   });
 
   it("[Q-25] 만점 초과 점수는 미입력으로 두고 확인할 학생으로 알린다", async () => {

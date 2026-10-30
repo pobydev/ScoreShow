@@ -2,6 +2,8 @@ import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
 import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import {
+  NICE_DATA_AREAS_ROWS,
+  NICE_DATA_SINGLE_ROWS,
   NICE_MULTI_MERGES,
   NICE_MULTI_ROWS,
   NICE_SINGLE_MERGES,
@@ -51,6 +53,24 @@ describe.each(["xlsx", "xls"] as const)("%s", (format) => {
 });
 
 describe("파일 공통", () => {
+  it("XLS data 형식(병합 없음, A열 시작)의 한 영역 파일을 XLS와 같은 경로로 읽는다", async () => {
+    const students = await parseStudents(toWorkbookBytes(NICE_DATA_SINGLE_ROWS));
+    expect(summarize(students)).toEqual([
+      "2-1-1 1/1 | 탐구1:8.5/10",
+      "2-1-2 1/2 | 탐구1:null/10",
+      "2-1-3 1/3 | 탐구1:6/10",
+    ]);
+  });
+
+  it("XLS data 형식의 전체 영역 파일을 읽고 합계와 통계 줄은 읽지 않는다", async () => {
+    const students = await parseStudents(toWorkbookBytes(NICE_DATA_AREAS_ROWS));
+    expect(summarize(students)).toEqual([
+      "2-1-1 1/1 | 탐구1:18/20 탐구2:17/20 토론:25/30 실험:4/5",
+      "2-1-2 1/2 | 탐구1:20/20 탐구2:null/20 토론:30/30 실험:5/5",
+    ]);
+  });
+
+
   it("첫 번째 시트만 읽는다", async () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
