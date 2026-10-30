@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -267,6 +267,10 @@ if (!gotTheLock) {
 
   // 앱이 준비되면 창 생성
   app.whenReady().then(() => {
+    // 맞춤법 검사를 끕니다. 언어 목록까지 비워야 처음 실행할 때 Google 서버에서 사전을 받지 않습니다.
+    session.defaultSession.setSpellCheckerEnabled(false);
+    session.defaultSession.setSpellCheckerLanguages([]);
+
     createMenu();
     createWindow();
 
