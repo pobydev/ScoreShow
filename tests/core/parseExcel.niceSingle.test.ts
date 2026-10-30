@@ -260,7 +260,7 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(summarize(students)).toEqual(["3-1-1 김가상 | 3학년 독서:8/10"]);
   });
 
-  it("[Q-22] 만점 표기가 없으면 학생마다 자기 점수가 만점이 된다", async () => {
+  it("[Q-22] 만점 표기가 없으면 100이 만점이 된다", async () => {
     const students = await parseRows([
       ["영역 : 듣기"],
       ["반/번호", "성명", "점수"],
@@ -268,8 +268,8 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ["1/2", "이가상", 9],
     ]);
     expect(summarize(students)).toEqual([
-      "1-1-1 김가상 | 듣기:8/8",
-      "1-1-2 이가상 | 듣기:9/9",
+      "1-1-1 김가상 | 듣기:8/100",
+      "1-1-2 이가상 | 듣기:9/100",
     ]);
   });
 
@@ -282,12 +282,19 @@ describe("나이스 단일 영역의 이상 동작", () => {
       ["반/번호", "성명", "점수"],
       ["1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:8/1"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:null/1"]);
   });
 
-  it("[Q-25] 만점 초과 점수를 그대로 둔다", async () => {
-    const students = await parseRows([META, TABLE_HEADER, ["1/1", "김가상", 12, ""]]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 듣기:12/10"]);
+  it("[Q-25] 만점 초과 점수는 미입력으로 두고 확인할 학생으로 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([META, TABLE_HEADER, ["1/1", "김가상", 12, ""], ["1/2", "이가상", 8, ""]])
+    );
+    expect(result).toMatchObject({ success: true, scoreIssues: [{ class: 1, number: 1 }] });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual([
+      "1-1-1 김가상 | 듣기:null/10",
+      "1-1-2 이가상 | 듣기:8/10",
+    ]);
   });
 
   it("[Q-26] 영역 이름이 첫 공백에서 잘린다", async () => {
@@ -299,12 +306,12 @@ describe("나이스 단일 영역의 이상 동작", () => {
     expect(summarize(students)).toEqual(["1-1-1 김가상 | 2차:8/10"]);
   });
 
-  it("[Q-26] 영어 영역 이름은 인식하지 못해 평가가 되고 만점도 잃는다", async () => {
+  it("[Q-26] 영어 영역 이름은 인식하지 못해 평가가 되고 만점도 100으로 둔다", async () => {
     const students = await parseRows([
       ["영역 : Speaking", "영역만점 : 10"],
       ["반/번호", "성명", "점수"],
       ["1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["1-1-1 김가상 | 평가:8/8"]);
+    expect(summarize(students)).toEqual(["1-1-1 김가상 | 평가:8/100"]);
   });
 });

@@ -15,7 +15,6 @@ describe("autoDetectMapping", () => {
     ["원점수", "score"],
     ["성취점", "score"],
     ["배점", "maxScore"],
-    ["총점", "maxScore"],
     ["grade", "grade"],
     ["과제명", "area"],
     ["항목", "area"],
@@ -64,8 +63,8 @@ describe("autoDetectMapping", () => {
     expect(autoDetectMapping([["반", "이름"]])).toEqual({ class: 0, name: 1 });
   });
 
-  it("[Q-23] 총점 컬럼을 만점으로 잡는다", () => {
-    expect(autoDetectMapping([["점수", "총점"]]).maxScore).toBe(1);
+  it("[Q-23] 총점 컬럼을 만점으로 잡지 않는다", () => {
+    expect(autoDetectMapping([["점수", "총점"]]).maxScore).toBeUndefined();
   });
 
   it("[Q-28] 영어 score, area 헤더는 잡지 못한다", () => {

@@ -5,6 +5,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "../store/store";
 import type { ColumnMapping } from "../types";
+import type { ScoreIssue } from "../core/normalize";
 import { TEMPLATE_DOWNLOAD_URLS, TEMPLATE_FILE_NAME } from "../core/template";
 import { loadedMessage } from "./app/loadMessages";
 
@@ -62,20 +63,26 @@ export function FilePicker() {
       worker.postMessage({ file });
 
       worker.onmessage = async (e) => {
-        const { success, students, mapping, error } = e.data as {
+        const { success, students, mapping, error, scoreIssues = [] } = e.data as {
           success: boolean;
           students: Parameters<typeof setStudents>[0];
           mapping: ColumnMapping | null;
           error?: string;
+          scoreIssues?: ScoreIssue[];
         };
 
         if (success) {
           await setStudents(students);
           setMapping(mapping ?? null);
-          setError(loadedMessage(students.length));
-          setTimeout(() => {
-            setError(null);
-          }, 3000);
+          if (scoreIssues.length > 0) {
+            // 교사가 학생 번호를 읽고 찾아볼 수 있도록 오래 보여 줍니다.
+            setError(loadedMessage(students.length, scoreIssues), 15000);
+          } else {
+            setError(loadedMessage(students.length));
+            setTimeout(() => {
+              setError(null);
+            }, 3000);
+          }
         } else {
           setError(error || "Failed to parse the selected file.");
         }

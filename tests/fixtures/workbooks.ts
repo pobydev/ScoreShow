@@ -88,11 +88,13 @@ function cellsAt(cells: Record<string, Cell> = {}): Cell[] {
   return Array.from(row, (value) => value ?? null);
 }
 
-function realRows(rows: Array<Record<string, Cell> | undefined>): Rows {
+type SparseRow = Record<string, Cell> | undefined;
+
+function realRows(rows: SparseRow[]): Rows {
   return rows.map(cellsAt);
 }
 
-const FOOTER = { I: 1, L: "/", N: 1, O: "page" };
+const FOOTER: SparseRow = { I: 1, L: "/", N: 1, O: "page" };
 
 /**
  * 실제 나이스 파일 3개에서 값 없이 본 구조를 지어낸 값으로 옮겼습니다.
@@ -126,7 +128,7 @@ export const NICE_REAL_SINGLE_MERGES: Merge[] = [
   ...[11, 12, 13].flatMap((row) => [`D${row}:E${row}`, `F${row}:H${row}`, `I${row}:N${row}`, `O${row}:P${row}`]),
 ];
 
-const REAL_AREA_HEADER = {
+const REAL_AREA_HEADER: SparseRow = {
   B: "반/번호",
   D: "성명",
   E: "탐구1 (서·논술)\n(만점 20.00,\n20.00%)",
@@ -136,14 +138,14 @@ const REAL_AREA_HEADER = {
   O: "합계",
   P: " 비고",
 };
-const REAL_AREA_TOP = [
+const REAL_AREA_TOP: SparseRow[] = [
   { M: "2025.03.02." },
   { F: "수행평가 일람표" },
   { B: "2025학년도   1학기   중학교   2학년   1 과학" },
   { B: "과목 : 과학", J: "담당 (수행) 가상선생" },
   undefined,
 ];
-const REAL_AREA_STATS = [
+const REAL_AREA_STATS: SparseRow[] = [
   { B: "응시자", E: "3 명", G: "3 명", H: "3 명", K: "3 명" },
   { B: "총 점", E: 50, G: 40, H: 70, K: 12, O: 172 },
   { B: "평 균", E: 16.7, G: 13.3, H: 23.3, K: 4, O: 57.3 },

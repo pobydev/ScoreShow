@@ -5,6 +5,7 @@
  */
 
 import { expect, vi } from "vitest";
+import type { ScoreIssue } from "../../src/core/normalize";
 import type { ColumnMapping, Student } from "../../src/types";
 
 export type WorkerResult =
@@ -13,6 +14,7 @@ export type WorkerResult =
       students: Student[];
       mapping: ColumnMapping | null;
       headerRows?: string[][];
+      scoreIssues?: ScoreIssue[];
     }
   | { success: false; error: string };
 

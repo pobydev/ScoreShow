@@ -149,9 +149,27 @@ describe("표준 템플릿의 이상 동작", () => {
     expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:6.5/10"]);
   });
 
-  it("[Q-25] 음수와 만점 초과 점수를 그대로 받아들인다", async () => {
-    const students = await parseTemplate([[2, 1, 1, "김가상", -5, 10, 150, 100]], NAMED_HEADER);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:-5/10 말하기:150/100"]);
+  it("[Q-25] 음수와 만점 초과 점수는 받지 않고 확인할 학생으로 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes(
+        templateRows(
+          [
+            [2, 1, 1, "김가상", -5, 10, 150, 100],
+            [2, 1, 2, "이가상", 7, "", 90, ""],
+          ],
+          NAMED_HEADER
+        )
+      )
+    );
+    expect(result).toMatchObject({
+      success: true,
+      scoreIssues: [
+        { class: 1, number: 1 },
+        { class: 1, number: 1 },
+      ],
+    });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual(["2-1-2 이가상 | 쓰기1:7/10 말하기:90/100"]);
   });
 
   it("[Q-12] 첫 학생 칸의 글자가 그 영역의 이름이 되고 첫 학생 점수는 빠진다", async () => {

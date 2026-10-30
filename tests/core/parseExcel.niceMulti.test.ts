@@ -333,7 +333,7 @@ describe("나이스 다중 영역의 이상 동작", () => {
       ["학년", "반/번호", "성명", "점수"],
       [3, "1/1", "김가상", 8],
     ]);
-    expect(summarize(students)).toEqual(["3-1-1 김가상 | 평가:8/8"]);
+    expect(summarize(students)).toEqual(["3-1-1 김가상 | 평가:8/100"]);
   });
 
   it("[Q-21] 영역 칸이 있는 표에서도 제목의 낱말을 영역으로 만들지 않는다", async () => {
@@ -345,18 +345,31 @@ describe("나이스 다중 영역의 이상 동작", () => {
     expect(summarize(students)).toEqual(["1-1-1 김가상 | 문법:8/100"]);
   });
 
-  it("[Q-25] 만점 초과, 음수, 단위, 소수점 변형 점수는 조용히 null이 된다", async () => {
-    const students = await parseRows([
-      ["반/번호", "성명", "말하기", "듣기"],
-      ["", "", "만점 10", "만점 10"],
-      ["1/1", "김가상", 12, -1],
-      ["1/2", "이가상", "8점", ".5"],
-      ["1/3", "박가상", "1,5", "5."],
-    ]);
-    expect(summarize(students)).toEqual([
+  it("[Q-25] 8점은 8로 읽고 만점 초과, 음수, 못 읽는 값은 미입력으로 두어 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes([
+        ["반/번호", "성명", "말하기", "듣기"],
+        ["", "", "만점 10", "만점 10"],
+        ["1/1", "김가상", 12, -1],
+        ["1/2", "이가상", "8점", ".5"],
+        ["1/3", "박가상", "1,5", "5."],
+        ["1/4", "최가상", "", "인정결"],
+      ])
+    );
+    expect(result).toMatchObject({
+      success: true,
+      scoreIssues: [
+        { class: 1, number: 1 },
+        { class: 1, number: 1 },
+        { class: 1, number: 2 },
+      ],
+    });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual([
       "1-1-1 김가상 | 말하기:null/10 듣기:null/10",
-      "1-1-2 이가상 | 말하기:null/10 듣기:null/10",
-      "1-1-3 박가상 | 말하기:null/10 듣기:5/10",
+      "1-1-2 이가상 | 말하기:8/10 듣기:null/10",
+      "1-1-3 박가상 | 말하기:1.5/10 듣기:5/10",
+      "1-1-4 최가상 | 말하기:null/10 듣기:null/10",
     ]);
   });
 

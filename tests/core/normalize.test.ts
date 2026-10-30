@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { normalizeRow } from "../../src/core/normalize";
+import { normalizeRow, readScore } from "../../src/core/normalize";
 import type { ParsedRow } from "../../src/types";
 
 const BASE: ParsedRow = { grade: "2", class: "1/3", name: "김가상", area: "듣기" };
@@ -77,20 +77,17 @@ describe("normalizeRow 만점", () => {
     expect(maxScoreOf(input, "8")).toBe(expected);
   });
 
-  it("[Q-22] 만점이 없으면 점수를 만점으로 삼는다", () => {
-    expect(maxScoreOf(undefined, "8")).toBe(8);
-  });
-
-  it("[Q-22] 만점이 없고 0점이면 만점도 0이 된다", () => {
-    expect(maxScoreOf(undefined, "0")).toBe(0);
+  it("[Q-22] 만점이 없으면 100으로 둔다", () => {
+    expect(maxScoreOf(undefined, "8")).toBe(100);
+    expect(maxScoreOf(undefined, "0")).toBe(100);
   });
 
   it("만점도 점수도 없으면 100이다", () => {
     expect(maxScoreOf(undefined, undefined)).toBe(100);
   });
 
-  it("만점을 읽지 못하면 점수를, 점수도 없으면 100을 쓴다", () => {
-    expect(maxScoreOf("abc", "8")).toBe(8);
+  it("[Q-22] 만점을 읽지 못하면 100으로 둔다", () => {
+    expect(maxScoreOf("abc", "8")).toBe(100);
     expect(maxScoreOf("abc", undefined)).toBe(100);
     expect(maxScoreOf("abc", "0")).toBe(100);
   });
@@ -103,26 +100,42 @@ describe("normalizeRow 만점", () => {
     expect(maxScoreOf("1,000", "1")).toBe(1);
   });
 
-  it("만점 0은 그대로 둔다", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    expect(maxScoreOf("0", "8")).toBe(0);
-    expect(warn).toHaveBeenCalled();
+  it("[Q-22] 만점 0은 만점을 모르는 것으로 보아 100으로 둔다", () => {
+    expect(maxScoreOf("0", "8")).toBe(100);
   });
 
-  it("만점 초과 점수는 경고만 하고 그대로 둔다", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    expect(evaluationOf({ score: "12", maxScore: "10" })).toEqual({
-      area: "듣기",
-      score: 12,
-      maxScore: 10,
-    });
-    expect(warn).toHaveBeenCalledTimes(1);
+  it("[Q-25] 만점 초과 점수는 미입력으로 두고 확인 대상으로 알린다", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const row = normalizeRow({ ...BASE, score: "12", maxScore: "10" });
+    expect(row?.evaluation).toEqual({ area: "듣기", score: null, maxScore: 10 });
+    expect(row?.scoreInvalid).toBe(true);
   });
 
   it("[Q-33] 만점 초과 경고가 학생 이름과 점수를 콘솔에 남긴다", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     evaluationOf({ score: "12", maxScore: "10" });
     expect(warn).toHaveBeenCalledWith("Score exceeds max: 12/10 for 김가상");
+  });
+});
+
+describe("[Q-25] readScore", () => {
+  it.each([
+    ["8", 8],
+    ["8점", 8],
+    ["8/10", 8],
+    ["6,50", 6.5],
+    ["10", 10],
+    ["0", 0],
+  ])("%j은 점수 %j로 읽는다", (input, score) => {
+    expect(readScore(input, 10)).toEqual({ score, invalid: false });
+  });
+
+  it.each([[undefined], [""], ["   "], ["인정결"], ["전출"]])("%j은 확인 대상이 아닌 미입력이다", (input) => {
+    expect(readScore(input, 10)).toEqual({ score: null, invalid: false });
+  });
+
+  it.each([["12"], ["-1"], ["미응시"], ["abc"], [".5"]])("%j은 확인이 필요한 미입력이다", (input) => {
+    expect(readScore(input, 10)).toEqual({ score: null, invalid: true });
   });
 });
 

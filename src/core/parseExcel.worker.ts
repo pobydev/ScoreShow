@@ -6,7 +6,8 @@ import * as XLSX from "xlsx";
 import type { ParsedRow } from "../types";
 import { autoDetectMapping } from "./mapping";
 import type { ColumnMapping } from "../types";
-import { normalizeRow } from "./normalize";
+import { normalizeRow, readScore } from "./normalize";
+import type { ScoreIssue } from "./normalize";
 import type { Student, Evaluation } from "../types";
 
 /**
@@ -217,7 +218,9 @@ function findAreaColumnsByStructure(
   return columns.length > 0 ? { columns, classCol, nameCol } : null;
 }
 
-function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
+function parseStandardTemplate(
+  worksheet: XLSX.WorkSheet
+): { students: Student[]; scoreIssues: ScoreIssue[] } | null {
   const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
   if (range.e.r < 2) {
     // 최소 0행(설명), 1행(헤더), 2행(첫 학생) 필요
@@ -317,6 +320,7 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
   }
 
   const studentsMap = new Map<string, Student>();
+  const scoreIssues: ScoreIssue[] = [];
 
   // 2행(인덱스 2)부터 학생 데이터 읽기 (2행은 예시이지만 실제 데이터로도 사용 가능)
   for (let row = 2; row <= range.e.r; row++) {
@@ -360,10 +364,6 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
 
     // 각 영역의 점수 읽기
     for (const areaCol of areaColumns) {
-      // 점수는 영역 이름 칸(scoreCol)에서 읽음
-      const scoreRaw = getRawCellValue(worksheet, row, areaCol.scoreCol).trim();
-      const score = parseNumericCell(scoreRaw);
-      
       // 만점은 만점 칸에서 읽고, 비어있으면 2행의 기본 만점 사용
       const maxScoreRaw = getRawCellValue(worksheet, row, areaCol.maxScoreCol).trim();
       const maxScoreCandidate = parseNumericCell(maxScoreRaw);
@@ -371,6 +371,11 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
         maxScoreCandidate && maxScoreCandidate > 0
           ? maxScoreCandidate
           : areaCol.defaultMaxScore;
+
+      // 점수는 영역 이름 칸(scoreCol)에서 읽음
+      const scoreRaw = getRawCellValue(worksheet, row, areaCol.scoreCol);
+      const { score, invalid } = readScore(scoreRaw, maxScore);
+      if (invalid) scoreIssues.push({ class: classNum, number });
 
       // 점수가 있으면 평가 항목 추가
       if (score !== null) {
@@ -397,7 +402,7 @@ function parseStandardTemplate(worksheet: XLSX.WorkSheet): Student[] | null {
     return a.number - b.number;
   });
 
-  return students;
+  return { students, scoreIssues };
 }
 
 self.onmessage = async function (
@@ -500,11 +505,12 @@ self.onmessage = async function (
     }
 
     // 표준 템플릿인지 먼저 확인
-    const templateStudents = parseStandardTemplate(worksheet);
-    if (templateStudents) {
+    const template = parseStandardTemplate(worksheet);
+    if (template) {
       self.postMessage({
         success: true,
-        students: templateStudents,
+        students: template.students,
+        scoreIssues: template.scoreIssues,
         mapping: null,
       });
       return;
@@ -1623,6 +1629,7 @@ self.onmessage = async function (
 
     // 정규화 및 학생 데이터 생성
     const studentsMap = new Map<string, Student>();
+    const scoreIssues: ScoreIssue[] = [];
 
     // 여러 영역이 있는 경우, 각 행에서 모든 영역의 점수 읽기
     if (areaColumns.length > 0) {
@@ -1681,68 +1688,9 @@ self.onmessage = async function (
 
         // 모든 영역 컬럼에서 점수 읽기
         for (const areaCol of areaColumns) {
-          // 점수 찾기: 각 영역 컬럼은 독립적으로 처리
-          let score: number | null = null;
-
-          // 해당 영역 컬럼에서만 점수 읽기
-          const col = areaCol.col;
-          
-          if (col >= 0 && col < rawRowData.length) {
-            const scoreValue = rawRowData[col] || "";
-            const scoreStr = scoreValue.toString().trim();
-
-            // 결시 관련 텍스트 체크
-            
-            // 빈 셀이거나 결시 관련 텍스트면 null
-            if (!scoreStr || scoreStr === "" || ABSENCE_KEYWORDS.test(scoreStr)) {
-              score = null;
-              if (import.meta.env.DEV) {
-                console.log(
-                  `[Parser] Empty or absence reason cell for "${areaCol.areaName}" at col ${col}: "${scoreStr}"`
-                );
-              }
-            } else {
-              // 점수 파싱 (숫자만 추출)
-              const scoreMatch = scoreStr.match(/^(\d+\.?\d*)$/);
-              if (scoreMatch) {
-                const parsedScore = parseFloat(scoreMatch[1]);
-                // 유효한 점수인지 확인 (0 이상, 만점 이하)
-                if (
-                  !isNaN(parsedScore) &&
-                  parsedScore >= 0 &&
-                  parsedScore <= areaCol.maxScore
-                ) {
-                  score = parsedScore;
-                  if (import.meta.env.DEV) {
-                    console.log(
-                      `[Parser] Found score for "${areaCol.areaName}" at col ${col}: ${score}`
-                    );
-                  }
-                } else {
-                  score = null;
-                  if (import.meta.env.DEV) {
-                    console.log(
-                      `[Parser] Invalid score for "${areaCol.areaName}" at col ${col}: ${parsedScore} (max: ${areaCol.maxScore})`
-                    );
-                  }
-                }
-              } else {
-                score = null;
-                if (import.meta.env.DEV) {
-                  console.log(
-                    `[Parser] Could not parse score for "${areaCol.areaName}" at col ${col}: "${scoreStr}"`
-                  );
-                }
-              }
-            }
-          } else {
-            score = null;
-            if (import.meta.env.DEV) {
-              console.log(
-                `[Parser] Column out of range for "${areaCol.areaName}": col ${col} (max: ${rawRowData.length - 1})`
-              );
-            }
-          }
+          // 각 영역 컬럼은 독립적으로 처리
+          const { score, invalid } = readScore(rawRowData[areaCol.col], areaCol.maxScore);
+          if (invalid) scoreIssues.push({ class: classNum, number });
 
           // Evaluation 생성
           const evaluation: Evaluation = {
@@ -1768,6 +1716,9 @@ self.onmessage = async function (
       for (const parsed of parsedRows) {
         const normalized = normalizeRow(parsed);
         if (!normalized) continue;
+        if (normalized.scoreInvalid) {
+          scoreIssues.push({ class: normalized.class, number: normalized.number });
+        }
 
         const studentId = `${normalized.grade}-${normalized.class}-${normalized.number}`;
 
@@ -1821,6 +1772,7 @@ self.onmessage = async function (
     self.postMessage({
       success: true,
       students,
+      scoreIssues,
       mapping,
       headerRows,
     });

@@ -68,6 +68,21 @@ describe("setStudents", () => {
   });
 });
 
+describe("setError 표시 시간", () => {
+  it("[Q-25] 표시 시간을 주면 그동안 메시지를 지우지 않는다", () => {
+    vi.useFakeTimers();
+    try {
+      store().setError("확인 필요", 15000);
+      vi.advanceTimersByTime(14999);
+      expect(store().error).toBe("확인 필요");
+      vi.advanceTimersByTime(1);
+      expect(store().error).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("학생 이동", () => {
   beforeEach(async () => {
     await store().setStudents(THREE);

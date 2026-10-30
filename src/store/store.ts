@@ -13,7 +13,7 @@ interface AppStore extends AppState {
   setPresenterMode: (enabled: boolean) => void;
   setBlackout: (enabled: boolean) => void;
   setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
+  setError: (error: string | null, durationMs?: number) => void;
   setMapping: (mapping: ColumnMapping | null) => void;
   setEditMode: (enabled: boolean) => void;
   updateEvaluation: (
@@ -86,16 +86,16 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setLoading: (loading) => set({ isLoading: loading }),
 
-  setError: (error) => {
+  setError: (error, durationMs = 5000) => {
     set({ error });
-    // 에러가 설정되면 5초 후 자동으로 해제
+    // 에러가 설정되면 정해진 시간(기본 5초) 후 자동으로 해제
     if (error) {
       setTimeout(() => {
         const currentError = get().error;
         if (currentError === error) {
           set({ error: null });
         }
-      }, 5000);
+      }, durationMs);
     }
   },
 

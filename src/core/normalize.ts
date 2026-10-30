@@ -5,6 +5,14 @@
 
 import type { Evaluation, ParsedRow } from "../types";
 
+/** 확인이 필요한 점수가 있는 학생 (점수 하나당 하나) */
+export interface ScoreIssue {
+  class: number;
+  number: number;
+}
+
+const ABSENCE_KEYWORDS = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
+
 /**
  * 점수 문자열을 숫자로 파싱합니다.
  * "10점", "10/10", "10 / 10" 등의 형식을 처리합니다.
@@ -19,8 +27,7 @@ function parseScore(scoreStr: string | undefined): number | null {
   if (!normalized || normalized === "") return null;
 
   // 결시 관련 텍스트 필터링
-  const absenceKeywords = /인정결|질병결|미인정결|기타결|입학|재입학|편입학|전입학|전출|면제|유예|취학|재취학/i;
-  if (absenceKeywords.test(normalized)) {
+  if (ABSENCE_KEYWORDS.test(normalized)) {
     return null;
   }
 
@@ -49,17 +56,29 @@ function parseScore(scoreStr: string | undefined): number | null {
 }
 
 /**
+ * 모든 파일 형식의 점수를 같은 규칙으로 읽습니다.
+ * 빈칸과 결시 사유는 그냥 미입력이고, 음수, 만점 초과, 읽을 수 없는 값은
+ * 학생에게 보이지 않도록 미입력으로 두되 확인이 필요하다고 알립니다.
+ */
+export function readScore(
+  raw: string | undefined,
+  maxScore: number
+): { score: number | null; invalid: boolean } {
+  const text = raw?.toString().trim() ?? "";
+  if (!text || ABSENCE_KEYWORDS.test(text)) {
+    return { score: null, invalid: false };
+  }
+  const score = parseScore(text);
+  if (score === null || score > maxScore) {
+    return { score: null, invalid: true };
+  }
+  return { score, invalid: false };
+}
+
+/**
  * 만점 문자열을 숫자로 파싱합니다.
  */
-function parseMaxScore(
-  maxScoreStr: string | undefined,
-  score: number | null
-): number | null {
-  if (!maxScoreStr && score !== null) {
-    // 만점이 없으면 점수와 동일한 값으로 추정
-    return score;
-  }
-
+function parseMaxScore(maxScoreStr: string | undefined): number | null {
   if (!maxScoreStr) return null;
 
   let normalized = maxScoreStr.toString().trim().replace(/\s+/g, "");
@@ -140,6 +159,7 @@ export function normalizeRow(row: ParsedRow): {
   number: number;
   name: string;
   evaluation: Evaluation;
+  scoreInvalid: boolean;
 } | null {
   let grade = parseInteger(row.grade);
   let classNum: number | null = null;
@@ -164,8 +184,10 @@ export function normalizeRow(row: ParsedRow): {
   // 성명 칸이 빈 나이스 파일이 있으므로 학생을 빼지 않고 반/번호로 보여 줍니다.
   const name =
     normalizeName(row.name) || (hasClassAndNumber ? `${classNum}/${number}` : "");
-  const score = parseScore(row.score);
-  let maxScore = parseMaxScore(row.maxScore, score);
+  // 만점 정보가 없으면 100으로 둡니다. 나이스 파일에는 만점이 항상 있으므로 그 밖의 파일을 위한 규칙입니다.
+  const parsedMaxScore = parseMaxScore(row.maxScore);
+  const maxScore = parsedMaxScore && parsedMaxScore > 0 ? parsedMaxScore : 100;
+  const { score, invalid: scoreInvalid } = readScore(row.score, maxScore);
 
   // 필수 필드 검증 (학년은 선택적, 반/번호와 이름은 필수)
   if (classNum === null || number === null || !name) {
@@ -181,21 +203,10 @@ export function normalizeRow(row: ParsedRow): {
   // (점수가 나중에 입력될 수 있음)
   // score가 null이면 null로 유지 (미입력 상태)
 
-  if (maxScore === null) {
-    // 만점 정보가 없으면 점수와 동일하게 설정하거나 기본값 (score가 null이 아니고 0보다 클 때)
-    maxScore = (score !== null && score > 0) ? score : 100; // 기본값 100
-  }
-
-  // 음수 체크 (score가 null이 아닐 때만)
-  if (score !== null && (score < 0 || maxScore < 0)) {
-    console.warn(`Invalid score: ${score}/${maxScore} for ${name}`);
-    return null;
-  }
-
-  // 만점 초과 체크 (score가 null이 아닐 때만)
-  if (score !== null && score > maxScore) {
-    console.warn(`Score exceeds max: ${score}/${maxScore} for ${name}`);
-    // 경고만 표시하고 진행
+  // 만점 초과 체크
+  const rawScore = parseScore(row.score);
+  if (rawScore !== null && rawScore > maxScore) {
+    console.warn(`Score exceeds max: ${rawScore}/${maxScore} for ${name}`);
   }
 
   return {
@@ -208,5 +219,6 @@ export function normalizeRow(row: ParsedRow): {
       score,
       maxScore,
     },
+    scoreInvalid,
   };
 }
