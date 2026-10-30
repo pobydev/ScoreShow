@@ -44,9 +44,12 @@ function student(id: string): Student {
   };
 }
 
+// 시험에서는 렌더링 없이 훅을 바로 부릅니다.
+const runHook = useEditMode;
+
 /** 훅을 한 번 실행하고 지연 포커스까지 기다린 뒤 포커스 횟수를 돌려줍니다. */
 function renderAndFlush(selected: Student | undefined) {
-  useEditMode(selected);
+  runHook(selected);
   vi.advanceTimersByTime(50);
   return harness.focus.mock.calls.length;
 }
