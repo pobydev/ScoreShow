@@ -11,18 +11,14 @@ function parseTemplate(rows: Rows, header?: Rows[number]) {
 }
 
 describe("표준 템플릿", () => {
-  it("[Q-13] 저장소의 실제 템플릿 파일을 읽으면 예시 두 행이 학생이 된다", async () => {
+  it("[Q-13] 저장소의 실제 템플릿 파일을 그대로 올리면 예시 두 행을 학생으로 보지 않는다", async () => {
     const bytes = new Uint8Array(readFileSync("public/ScoreShow_Template.xlsx"));
-    const result = await runWorker(bytes);
-    expect(result).toMatchObject({ success: true, mapping: null });
-    expect(result).not.toHaveProperty("headerRows");
-    if (!result.success) return;
-    expect(
-      result.students.map((s) => [s.id, s.evaluations.map((e) => `${e.area}:${e.score}/${e.maxScore}`)])
-    ).toEqual([
-      ["2-1-1", ["영역1:9/10", "영역2:8/10", "영역3:18/20", "영역4:19/20", "영역5:19/20"]],
-      ["2-1-2", ["영역1:7/10", "영역2:9/10", "영역3:17/20", "영역4:18/20", "영역5:18/20"]],
-    ]);
+    expect(await runWorker(bytes)).toMatchObject(NO_STUDENTS_FOUND);
+  });
+
+  it("[Q-13] 예시와 이름이 같아도 값이 다르면 실제 학생으로 읽는다", async () => {
+    const students = await parseTemplate([[2, 1, 1, "홍길동", 1, 10]]);
+    expect(summarize(students)).toEqual(["2-1-1 홍길동 | 영역1:1/10"]);
   });
 
   it("1행의 영역 이름과 2행의 기본 만점을 쓴다", async () => {
@@ -149,7 +145,7 @@ describe("표준 템플릿의 이상 동작", () => {
     expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:6.5/10"]);
   });
 
-  it("[Q-25] 음수와 만점 초과 점수는 받지 않고 확인할 학생으로 알린다", async () => {
+  it("[Q-25] 음수와 만점 초과 점수는 미입력으로 두고 확인할 학생으로 알린다", async () => {
     const result = await runWorker(
       toWorkbookBytes(
         templateRows(
@@ -169,37 +165,52 @@ describe("표준 템플릿의 이상 동작", () => {
       ],
     });
     if (!result.success) return;
-    expect(summarize(result.students)).toEqual(["2-1-2 이가상 | 쓰기1:7/10 말하기:90/100"]);
-  });
-
-  it("[Q-12] 첫 학생 칸의 글자가 그 영역의 이름이 되고 첫 학생 점수는 빠진다", async () => {
-    const students = await parseTemplate([
-      [2, 1, 1, "김가상", "결시", 10, 5, 10],
-      [2, 1, 2, "이가상", 7, "", 9, ""],
-    ]);
-    expect(summarize(students)).toEqual([
-      "2-1-1 김가상 | 영역2:5/10",
-      "2-1-2 이가상 | 결시:7/10 영역2:9/10",
+    expect(summarize(result.students)).toEqual([
+      "2-1-1 김가상 | 쓰기1:null/10 말하기:null/100",
+      "2-1-2 이가상 | 쓰기1:7/10 말하기:90/100",
     ]);
   });
 
-  it("[Q-12] 첫 학생 칸이 8/10이면 영역 이름이 8/10이 된다", async () => {
-    const students = await parseTemplate([[2, 1, 1, "김가상", "8/10", 10]]);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 8/10:8/10"]);
-  });
-
-  it("[Q-14] 같은 학년, 반, 번호가 두 번 나오면 첫 이름을 쓰고 평가를 이어 붙인다", async () => {
-    const students = await parseTemplate(
-      [
-        [2, 1, 1, "김가상", 9, 10],
-        [2, 1, 1, "이가상", 3, ""],
-      ],
-      NAMED_HEADER
+  it("[Q-12] 첫 학생 칸의 글자는 영역 이름이 되지 않고 확인 대상이 된다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes(
+        templateRows([
+          [2, 1, 1, "김가상", "결시", 10, 5, 10],
+          [2, 1, 2, "이가상", 7, "", 9, ""],
+        ])
+      )
     );
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:9/10 쓰기1:3/10"]);
+    expect(result).toMatchObject({ success: true, scoreIssues: [{ class: 1, number: 1 }] });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual([
+      "2-1-1 김가상 | 영역1:null/10 영역2:5/10",
+      "2-1-2 이가상 | 영역1:7/10 영역2:9/10",
+    ]);
   });
 
-  it("[Q-15] 빈 점수와 읽지 못한 점수는 평가 자체를 만들지 않는다", async () => {
+  it("[Q-12] 첫 학생 칸이 8/10이어도 영역 이름은 기본값이다", async () => {
+    const students = await parseTemplate([[2, 1, 1, "김가상", "8/10", 10]]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 영역1:8/10"]);
+  });
+
+  it("[Q-14] 같은 학년, 반, 번호가 두 번 나오면 뒤 줄이 덮어쓰고 확인할 학생으로 알린다", async () => {
+    const result = await runWorker(
+      toWorkbookBytes(
+        templateRows(
+          [
+            [2, 1, 1, "김가상", 9, 10],
+            [2, 1, 1, "이가상", 3, ""],
+          ],
+          NAMED_HEADER
+        )
+      )
+    );
+    expect(result).toMatchObject({ success: true, scoreIssues: [{ class: 1, number: 1 }] });
+    if (!result.success) return;
+    expect(summarize(result.students)).toEqual(["2-1-1 김가상 | 쓰기1:3/10"]);
+  });
+
+  it("[Q-15] 빈 점수와 읽지 못한 점수는 미입력으로 남기고 학생을 빼지 않는다", async () => {
     const students = await parseTemplate(
       [
         [2, 1, 1, "김가상", 9, 10, 8, 10],
@@ -210,8 +221,14 @@ describe("표준 템플릿의 이상 동작", () => {
     );
     expect(summarize(students)).toEqual([
       "2-1-1 김가상 | 쓰기1:9/10 말하기:8/10",
-      "2-1-3 박가상 | 쓰기1:7/10",
+      "2-1-2 이가상 | 쓰기1:null/10 말하기:null/10",
+      "2-1-3 박가상 | 쓰기1:7/10 말하기:null/10",
     ]);
+  });
+
+  it("[Q-15] 파일 전체에서 점수가 없는 영역 칸은 영역으로 만들지 않는다", async () => {
+    const students = await parseTemplate([[2, 1, 1, "김가상", "", 10, 7, 10, "", 10]]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 영역2:7/10"]);
   });
 
   it("[Q-17] 점수가 하나도 없으면 일반 파서로 넘어가 실패로 알린다", async () => {

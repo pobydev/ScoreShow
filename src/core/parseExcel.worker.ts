@@ -218,6 +218,21 @@ function findAreaColumnsByStructure(
   return columns.length > 0 ? { columns, classCol, nameCol } : null;
 }
 
+/**
+ * public/ScoreShow_Template.xlsx에 들어 있는 예시 두 행입니다.
+ * 값이 모두 같을 때만 예시로 봅니다.
+ */
+const TEMPLATE_SAMPLE_ROWS = [
+  ["2", "1", "1", "홍길동", "9", "10", "8", "10", "18", "20", "19", "20", "19", "20"],
+  ["2", "1", "2", "김철수", "7", "", "9", "", "17", "", "18", "", "18", ""],
+];
+
+function isTemplateSampleRow(worksheet: XLSX.WorkSheet, row: number): boolean {
+  return TEMPLATE_SAMPLE_ROWS.some((sample) =>
+    sample.every((value, col) => getRawCellValue(worksheet, row, col).trim() === value)
+  );
+}
+
 function parseStandardTemplate(
   worksheet: XLSX.WorkSheet
 ): { students: Student[]; scoreIssues: ScoreIssue[] } | null {
@@ -275,26 +290,9 @@ function parseStandardTemplate(
     
     // 1행(인덱스 1) 헤더에서 영역 이름 읽기
     // 표준 템플릿: 1행에 "영역1 이름", "영역2 이름" 등이 헤더로 있음
+    // 영역 이름은 제목 줄에서만 읽습니다. 학생 칸의 글자가 영역 이름이 되면 안 됩니다.
     let areaName = getRawCellValue(worksheet, 1, nameCol).trim();
-    
-    // 1행이 비어있거나 기본값 패턴이면 2행에서 읽기 (사용자가 직접 입력한 경우)
-    if (!areaName || areaName.match(/^영역\d+\s*이름?$/)) {
-      areaName = getRawCellValue(worksheet, 2, nameCol).trim();
-      
-      // 2행에서 읽은 값이 숫자면 점수이므로 무시하고 기본값 사용
-      if (areaName && /^\d+\.?\d*$/.test(areaName)) {
-        areaName = `영역${i + 1}`;
-      }
-    } else {
-      // 1행에 "영역N 이름" 패턴이 있으면 "영역N"으로 변환
-      const defaultPatternMatch = areaName.match(/^영역(\d+)\s*이름?$/);
-      if (defaultPatternMatch) {
-        areaName = `영역${defaultPatternMatch[1]}`;
-      }
-    }
-    
-    // 여전히 비어있으면 "영역N" 사용
-    if (!areaName) {
+    if (!areaName || /^영역\d+\s*이름?$/.test(areaName)) {
       areaName = `영역${i + 1}`;
     }
 
@@ -315,15 +313,27 @@ function parseStandardTemplate(
     });
   }
 
-  if (areaColumns.length === 0) {
+  // 예시 행과 이름 없는 행을 뺀 줄이 학생 줄입니다.
+  const studentRows: number[] = [];
+  for (let row = 2; row <= range.e.r; row++) {
+    if (getRawCellValue(worksheet, row, nameCol).trim() && !isTemplateSampleRow(worksheet, row)) {
+      studentRows.push(row);
+    }
+  }
+
+  // 파일 전체에서 점수가 없는 영역 칸(서식의 안 쓴 칸)은 영역으로 만들지 않습니다.
+  const usedAreaColumns = areaColumns.filter((areaCol) =>
+    studentRows.some((row) => getRawCellValue(worksheet, row, areaCol.scoreCol).trim())
+  );
+
+  if (usedAreaColumns.length === 0) {
     return null;
   }
 
   const studentsMap = new Map<string, Student>();
   const scoreIssues: ScoreIssue[] = [];
 
-  // 2행(인덱스 2)부터 학생 데이터 읽기 (2행은 예시이지만 실제 데이터로도 사용 가능)
-  for (let row = 2; row <= range.e.r; row++) {
+  for (const row of studentRows) {
     const gradeValue =
       gradeCol !== -1 ? getRawCellValue(worksheet, row, gradeCol).trim() : "";
     const classValue =
@@ -331,10 +341,6 @@ function parseStandardTemplate(
     const numberValue =
       numberCol !== -1 ? getRawCellValue(worksheet, row, numberCol).trim() : "";
     const name = getRawCellValue(worksheet, row, nameCol).trim();
-
-    if (!name) {
-      continue;
-    }
 
     let grade = parseInt(gradeValue, 10);
     if (!Number.isFinite(grade)) {
@@ -349,7 +355,10 @@ function parseStandardTemplate(
     }
 
     const studentId = `${grade}-${classNum}-${number}`;
-    if (!studentsMap.has(studentId)) {
+    if (studentsMap.has(studentId)) {
+      // 같은 학생이 다시 나오면 뒤 줄이 덮어쓰고 확인 대상으로 알립니다.
+      scoreIssues.push({ class: classNum, number });
+    } else {
       studentsMap.set(studentId, {
         id: studentId,
         grade,
@@ -361,9 +370,10 @@ function parseStandardTemplate(
     }
 
     const student = studentsMap.get(studentId)!;
+    student.evaluations = [];
 
     // 각 영역의 점수 읽기
-    for (const areaCol of areaColumns) {
+    for (const areaCol of usedAreaColumns) {
       // 만점은 만점 칸에서 읽고, 비어있으면 2행의 기본 만점 사용
       const maxScoreRaw = getRawCellValue(worksheet, row, areaCol.maxScoreCol).trim();
       const maxScoreCandidate = parseNumericCell(maxScoreRaw);
@@ -377,20 +387,15 @@ function parseStandardTemplate(
       const { score, invalid } = readScore(scoreRaw, maxScore);
       if (invalid) scoreIssues.push({ class: classNum, number });
 
-      // 점수가 있으면 평가 항목 추가
-      if (score !== null) {
-        student.evaluations.push({
-          area: areaCol.areaName,
-          score: score,
-          maxScore,
-        });
-      }
+      student.evaluations.push({
+        area: areaCol.areaName,
+        score,
+        maxScore,
+      });
     }
   }
 
-  const students = Array.from(studentsMap.values()).filter(
-    (student) => student.evaluations.length > 0
-  );
+  const students = Array.from(studentsMap.values());
 
   if (students.length === 0) {
     return null;
