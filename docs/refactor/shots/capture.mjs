@@ -540,8 +540,8 @@ await step("08-fullscreen-off-button");
 await key("F");
 await page.waitForTimeout(300);
 await step("08-fullscreen-on-again");
-await key("ArrowRight");
-await step("08-fullscreen-blackout");
+await key("ArrowLeft");
+await step("08-fullscreen-blackout", { shot: true });
 await page.locator('button[aria-label="발표 모드 종료"]').click();
 await page.mouse.move(0, 0);
 await page.waitForTimeout(300);
@@ -575,6 +575,26 @@ await page.mouse.move(0, 0);
 await page.locator('button[aria-label="발표 모드 종료"]').click();
 await page.mouse.move(0, 0);
 await step("08-exit-button");
+
+// 화이트아웃에서 전체화면 없이 버튼으로 종료
+await button("발표 모드 시작").click();
+await page.mouse.move(0, 0);
+await key("ArrowRight");
+await page.locator('button[aria-label="발표 모드 종료"]').click();
+await page.mouse.move(0, 0);
+await step("08-exit-from-blackout-button");
+await button("발표 모드 시작").click();
+await page.mouse.move(0, 0);
+await step("08-reenter-after-blackout-exit");
+await key("Escape");
+
+// Electron에서 버전 표시
+await page.addInitScript(() => {
+  window.electronAPI = { getVersion: () => "9.9.9" };
+});
+await page.reload();
+await page.waitForTimeout(150);
+await step("09-electron-version", { shot: true });
 
 writeFileSync(join(out, "trace.json"), JSON.stringify(trace, null, 1));
 await browser.close();
