@@ -1,0 +1,167 @@
+/**
+ * 파일 올리기와 표준 서식 받기
+ * 입력칸은 App에 하나만 두고, 시작 화면과 사이드바의 버튼이 함께 씁니다.
+ */
+
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useStore } from "../../store/store";
+import type { ColumnMapping } from "../../types";
+import { TEMPLATE_DOWNLOAD_URLS, TEMPLATE_FILE_NAME } from "../../core/template";
+import { loadedMessage } from "./loadMessages";
+
+const VALID_TYPES = [
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "text/csv",
+];
+
+/** 파일 해석 라이브러리나 브라우저의 영어 오류를 그대로 보이지 않습니다. */
+function readableError(message: string | undefined) {
+  return message && /[가-힣]/.test(message)
+    ? message
+    : "파일을 읽지 못했습니다. 파일이 손상되지 않았는지 확인해 주세요.";
+}
+
+export function useFileUpload() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  // 파일 이름은 메모리에만 둡니다. 암호화 저장소 밖에 평문으로 남기지 않습니다.
+  const [fileName, setFileName] = useState<string | null>(null);
+  const { setLoading, setError, setStudents, setMapping } = useStore();
+  const hasStudents = useStore((state) => state.students.length > 0);
+
+  useEffect(() => {
+    if (!hasStudents) {
+      setFileName(null);
+    }
+  }, [hasStudents]);
+
+  const fetchTemplateFromWeb = async (): Promise<Blob> => {
+    for (const templateUrl of TEMPLATE_DOWNLOAD_URLS) {
+      try {
+        const response = await fetch(templateUrl);
+        if (response.ok) {
+          return await response.blob();
+        }
+      } catch {
+        // Try next fallback URL.
+      }
+    }
+
+    throw new Error("Template file download failed from all fallback URLs.");
+  };
+
+  const handleFile = async (file: File) => {
+    if (!VALID_TYPES.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setError("지원하지 않는 파일 형식입니다. xlsx, xls, csv 파일을 올려 주세요.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const worker = new Worker(
+        new URL("../../core/parseExcel.worker.ts", import.meta.url),
+        { type: "module" }
+      );
+
+      worker.postMessage({ file });
+
+      worker.onmessage = async (e) => {
+        const { success, students, mapping, error } = e.data as {
+          success: boolean;
+          students: Parameters<typeof setStudents>[0];
+          mapping: ColumnMapping | null;
+          error?: string;
+        };
+
+        if (success) {
+          await setStudents(students);
+          setMapping(mapping ?? null);
+          setFileName(file.name);
+          setError(loadedMessage(students.length));
+          setTimeout(() => {
+            setError(null);
+          }, 3000);
+        } else {
+          setError(readableError(error));
+        }
+
+        setIsProcessing(false);
+        setLoading(false);
+        worker.terminate();
+      };
+
+      worker.onerror = (error) => {
+        setError(readableError(error.message));
+        setIsProcessing(false);
+        setLoading(false);
+        worker.terminate();
+      };
+    } catch (error) {
+      setError(readableError(error instanceof Error ? error.message : undefined));
+      setIsProcessing(false);
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // 같은 파일을 다시 골라도 변경으로 알아채도록 비웁니다.
+    event.target.value = "";
+    if (file) {
+      handleFile(file);
+    }
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      let blob: Blob;
+
+      if (typeof window !== "undefined" && window.electronAPI) {
+        const result = await window.electronAPI.getTemplateFile();
+        if (!result.success || !result.data) {
+          throw new Error(result.error || "Template file not found.");
+        }
+
+        const binaryString = atob(result.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        blob = new Blob([bytes], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+      } else {
+        blob = await fetchTemplateFromWeb();
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = TEMPLATE_FILE_NAME;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Template download failed:", error);
+      setError("표준 서식을 받지 못했습니다.");
+    }
+  };
+
+  return {
+    inputRef,
+    isProcessing,
+    fileName,
+    handleFile,
+    handleInputChange,
+    openFilePicker: () => inputRef.current?.click(),
+    downloadTemplate,
+  };
+}
+
+export type FileUpload = ReturnType<typeof useFileUpload>;
