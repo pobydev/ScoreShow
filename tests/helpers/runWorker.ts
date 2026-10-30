@@ -4,7 +4,7 @@
  * self만 바꿔 끼우면 실제 진입점을 호출할 수 있습니다.
  */
 
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import type { ColumnMapping, Student } from "../../src/types";
 
 export type WorkerResult =
@@ -54,6 +54,12 @@ export async function runWorker(
   }
   return posted[0];
 }
+
+/** 학생을 하나도 찾지 못한 파일의 결과입니다 (Q-17). */
+export const NO_STUDENTS_FOUND = {
+  success: false,
+  error: expect.stringContaining("학생을 찾지 못했습니다"),
+};
 
 /** 성공을 전제로 학생 목록만 꺼냅니다. */
 export async function parseStudents(

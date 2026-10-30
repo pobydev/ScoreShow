@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStudents, runWorker, summarize } from "../helpers/runWorker";
+import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import { FLAT_HEADER, toWorkbookBytes } from "../fixtures/workbooks";
 import type { Rows } from "../fixtures/workbooks";
 
@@ -119,13 +119,11 @@ describe("일반 표의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-08] 반과 번호가 따로 있는 표는 성공과 0명을 돌려준다", async () => {
+  it("[Q-08] 반과 번호가 따로 있는 표는 학생을 찾지 못해 실패로 알린다", async () => {
     const rows: Rows = [SEPARATE_HEADER];
     for (let i = 1; i <= 20; i++) rows.push([2, 1, i, "김가상", "독서", 8, 10]);
     const result = await runWorker(toWorkbookBytes(rows));
-    expect(result).toMatchObject({ success: true, students: [] });
-    expect(result).toMatchObject({ mapping: { number: 2 } });
-    expect(result).not.toHaveProperty("mapping.class");
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 
   it("[Q-09] 반/번호 헤더가 없으면 앞쪽 15행을 조용히 버린다", async () => {
@@ -179,13 +177,13 @@ describe("일반 표의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-28] 영어 헤더 표는 점수와 데이터 시작 행을 찾지 못해 0명이 된다", async () => {
+  it("[Q-28] 영어 헤더 표는 점수와 데이터 시작 행을 찾지 못해 실패로 알린다", async () => {
     const result = await runWorker(
       toWorkbookBytes([
         ["grade", "class", "name", "score"],
         [2, "1/1", "김가상", 8],
       ])
     );
-    expect(result).toMatchObject({ success: true, students: [] });
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 });

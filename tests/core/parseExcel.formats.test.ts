@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
-import { parseStudents, runWorker, summarize } from "../helpers/runWorker";
+import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import {
   FLAT_HEADER,
   NICE_MULTI_MERGES,
@@ -58,30 +58,22 @@ describe("csv", () => {
     expect(summarize(students)).toEqual(TEMPLATE_RESULT);
   });
 
-  it("[Q-10] BOM이 없는 UTF-8은 한글이 깨져 성공과 0명을 돌려준다", async () => {
-    expect(await runWorker(toCsvBytes(TEMPLATE))).toMatchObject({
-      success: true,
-      students: [],
-      mapping: {},
-    });
+  it("[Q-10] BOM이 없는 UTF-8은 한글이 깨져 실패로 알린다", async () => {
+    expect(await runWorker(toCsvBytes(TEMPLATE))).toMatchObject(NO_STUDENTS_FOUND);
   });
 
-  it("[Q-10] 엑셀 기본 CSV 인코딩(EUC-KR)도 한글이 깨져 0명이 된다", async () => {
+  it("[Q-10] 엑셀 기본 CSV 인코딩(EUC-KR)도 한글이 깨져 실패로 알린다", async () => {
     // "반/번호,이름\n1/1,가\n"의 EUC-KR 바이트
     const bytes = new Uint8Array([
       0xb9, 0xdd, 0x2f, 0xb9, 0xf8, 0xc8, 0xa3, 0x2c, 0xc0, 0xcc, 0xb8, 0xa7, 0x0a,
       0x31, 0x2f, 0x31, 0x2c, 0xb0, 0xa1, 0x0a,
     ]);
-    expect(await runWorker(bytes)).toMatchObject({
-      success: true,
-      students: [],
-      mapping: {},
-    });
+    expect(await runWorker(bytes)).toMatchObject(NO_STUDENTS_FOUND);
   });
 
-  it("[Q-10] BOM이 있어도 반/번호 1/1이 날짜로 바뀌어 다중 영역은 0명이 된다", async () => {
+  it("[Q-10] BOM이 있어도 반/번호 1/1이 날짜로 바뀌어 다중 영역은 실패로 알린다", async () => {
     const result = await runWorker(toCsvBytes(NICE_MULTI_ROWS, { bom: true }));
-    expect(result).toMatchObject({ success: true, students: [] });
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 
   it("[Q-10] BOM이 있어도 단일 영역은 반과 번호가 날짜 일련번호로 바뀐다", async () => {
@@ -133,7 +125,7 @@ describe("파일 공통", () => {
     ["빈 파일", () => new Uint8Array(0)],
     ["일반 글자", () => new TextEncoder().encode("hello world")],
     ["알 수 없는 바이너리", () => new Uint8Array(Array.from({ length: 600 }, (_, i) => (i * 37) % 256))],
-  ])("[Q-17] %s도 성공과 0명을 돌려준다", async (_label, makeBytes) => {
-    expect(await runWorker(makeBytes())).toMatchObject({ success: true, students: [] });
+  ])("[Q-17] 학생을 찾지 못한 실패로 알린다: %s", async (_label, makeBytes) => {
+    expect(await runWorker(makeBytes())).toMatchObject(NO_STUDENTS_FOUND);
   });
 });

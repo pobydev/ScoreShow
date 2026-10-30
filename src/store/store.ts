@@ -45,6 +45,10 @@ export const useStore = create<AppStore>((set, get) => ({
 
   // Actions
   setStudents: async (students) => {
+    // 빈 목록으로 기존 학생과 저장 데이터를 덮어쓰지 않습니다.
+    // 데이터를 지우는 동작은 clearAllData만 합니다.
+    if (students.length === 0) return;
+
     set({ students });
     // 진짜 학생이 존재하고 id가 명확해야만 자동 선택
     if (students.length > 0 && students[0].id && students[0].id !== "") {

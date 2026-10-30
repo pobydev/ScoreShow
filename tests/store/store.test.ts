@@ -52,15 +52,13 @@ describe("setStudents", () => {
     expect(store().selectedStudentId).toBeNull();
   });
 
-  it("[Q-30] 빈 목록을 넣어도 이전 선택이 남는다", async () => {
+  it("[Q-17] 빈 목록을 넣어도 기존 학생과 선택과 저장 데이터를 그대로 둔다", async () => {
     await store().setStudents(THREE);
+    vi.mocked(saveStudents).mockClear();
     await store().setStudents([]);
+    expect(store().students).toBe(THREE);
     expect(store().selectedStudentId).toBe("2-1-1");
-  });
-
-  it("[Q-17] 빈 목록을 넣으면 저장된 데이터를 빈 목록으로 덮어쓴다", async () => {
-    await store().setStudents([]);
-    expect(saveStudents).toHaveBeenCalledWith([]);
+    expect(saveStudents).not.toHaveBeenCalled();
   });
 
   it("저장이 실패하면 거부되지만 메모리 상태는 바뀐 채로 남는다", async () => {
@@ -101,9 +99,8 @@ describe("학생 이동", () => {
     expect(store().selectedStudentId).toBe("2-1-3");
   });
 
-  it("학생이 없으면 움직이지 않는다", async () => {
-    await store().setStudents([]);
-    store().setSelectedStudent(null);
+  it("학생이 없으면 움직이지 않는다", () => {
+    useStore.setState({ students: [], selectedStudentId: null });
     store().nextStudent();
     store().prevStudent();
     expect(store().selectedStudentId).toBeNull();

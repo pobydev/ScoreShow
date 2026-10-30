@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseStudents, runWorker, summarize } from "../helpers/runWorker";
+import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import { templateRows, toWorkbookBytes } from "../fixtures/workbooks";
 import type { Rows } from "../fixtures/workbooks";
 
@@ -196,23 +196,22 @@ describe("표준 템플릿의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-17] 점수가 하나도 없으면 일반 파서로 넘어가 성공과 0명을 돌려준다", async () => {
+  it("[Q-17] 점수가 하나도 없으면 일반 파서로 넘어가 실패로 알린다", async () => {
     const result = await runWorker(
       toWorkbookBytes(templateRows([[2, 1, 1, "김가상", "", "", "", ""]]))
     );
-    expect(result).toMatchObject({ success: true, students: [] });
-    expect(result).toHaveProperty("headerRows");
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 
-  it("[Q-16] 영역 칸이 고정 열이라 학년 컬럼이 없는 표는 인식하지 못하고 0명이 된다", async () => {
-    const students = await parseStudents(
+  it("[Q-16] 영역 칸이 고정 열이라 학년 컬럼이 없는 표는 인식하지 못하고 실패로 알린다", async () => {
+    const result = await runWorker(
       toWorkbookBytes([
         ["안내"],
         ["반", "번호", "이름", "국어", "수학"],
         [1, 1, "김가상", 90, 80],
       ])
     );
-    expect(students).toEqual([]);
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 
   it("[Q-16] 헤더가 2행에 있어야만 표준 템플릿으로 인식한다", async () => {
@@ -222,7 +221,6 @@ describe("표준 템플릿의 이상 동작", () => {
         [2, 1, 1, "김가상", 7, 10],
       ])
     );
-    expect(result).toMatchObject({ success: true, students: [] });
-    expect(result).not.toMatchObject({ mapping: null });
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 });

@@ -1662,6 +1662,16 @@ self.onmessage = async function (
       return a.number - b.number;
     });
 
+    // 학생을 하나도 찾지 못하면 실패로 알려 기존 데이터를 지킵니다.
+    if (students.length === 0) {
+      self.postMessage({
+        success: false,
+        error:
+          "파일에서 학생을 찾지 못했습니다. 파일 양식을 확인해 주세요. 기존 데이터는 그대로 유지됩니다.",
+      });
+      return;
+    }
+
     // 결과 전송
     self.postMessage({
       success: true,

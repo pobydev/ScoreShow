@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStudents, runWorker, summarize } from "../helpers/runWorker";
+import { NO_STUDENTS_FOUND, parseStudents, runWorker, summarize } from "../helpers/runWorker";
 import {
   NICE_MULTI_MERGES,
   NICE_MULTI_ROWS,
@@ -121,7 +121,9 @@ describe("나이스 다중 영역", () => {
     const memo = (count: number): Rows => Array.from({ length: count }, () => ["메모"]);
     const table: Rows = [["반/번호", "성명", "말하기"], ["1/1", "김가상", 8]];
     expect(await parseRows([...memo(14), ...table])).toHaveLength(1);
-    expect(await parseRows([...memo(15), ...table])).toEqual([]);
+    expect(await runWorker(toWorkbookBytes([...memo(15), ...table]))).toMatchObject(
+      NO_STUDENTS_FOUND
+    );
   });
 });
 
@@ -256,7 +258,7 @@ describe("나이스 다중 영역의 이상 동작", () => {
     ]);
   });
 
-  it("[Q-27] 16번째 행 아래의 헤더는 인식하지 못하고 성공과 0명을 돌려준다", async () => {
+  it("[Q-27] 16번째 행 아래의 헤더는 인식하지 못하고 실패로 알린다", async () => {
     const result = await runWorker(
       toWorkbookBytes([
         ...Array.from({ length: 15 }, () => ["메모"]),
@@ -264,6 +266,6 @@ describe("나이스 다중 영역의 이상 동작", () => {
         ["1/1", "김가상", 8],
       ])
     );
-    expect(result).toMatchObject({ success: true, students: [], mapping: {} });
+    expect(result).toMatchObject(NO_STUDENTS_FOUND);
   });
 });
