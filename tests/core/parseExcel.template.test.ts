@@ -139,14 +139,14 @@ describe("표준 템플릿", () => {
 });
 
 describe("표준 템플릿의 이상 동작", () => {
-  it("[Q-11] 점수 8/10은 슬래시를 지워 810이 된다", async () => {
+  it("[Q-11] 점수 8/10은 앞의 8로 읽는다", async () => {
     const students = await parseTemplate([[2, 1, 1, "김가상", "8/10", 10]], NAMED_HEADER);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:810/10"]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:8/10"]);
   });
 
-  it("[Q-11] 점수 6,50은 쉼표를 지워 650이 된다", async () => {
+  it("[Q-11] 점수 6,50은 쉼표를 소수점으로 보아 6.5로 읽는다", async () => {
     const students = await parseTemplate([[2, 1, 1, "김가상", "6,50", 10]], NAMED_HEADER);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:650/10"]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 쓰기1:6.5/10"]);
   });
 
   it("[Q-25] 음수와 만점 초과 점수를 그대로 받아들인다", async () => {
@@ -167,7 +167,7 @@ describe("표준 템플릿의 이상 동작", () => {
 
   it("[Q-12] 첫 학생 칸이 8/10이면 영역 이름이 8/10이 된다", async () => {
     const students = await parseTemplate([[2, 1, 1, "김가상", "8/10", 10]]);
-    expect(summarize(students)).toEqual(["2-1-1 김가상 | 8/10:810/10"]);
+    expect(summarize(students)).toEqual(["2-1-1 김가상 | 8/10:8/10"]);
   });
 
   it("[Q-14] 같은 학년, 반, 번호가 두 번 나오면 첫 이름을 쓰고 평가를 이어 붙인다", async () => {

@@ -95,7 +95,9 @@ function normalizeHeaderLabel(value: string): string {
 
 function parseNumericCell(value: string): number | null {
   if (!value) return null;
-  const numeric = parseFloat(value.replace(/[^-0-9.]/g, ""));
+  // normalize.ts의 점수 규칙과 같이 "8/10"은 앞의 8, "6,50"은 6.50으로 읽습니다.
+  const [head] = value.split("/");
+  const numeric = parseFloat(head.replace(/,/g, ".").replace(/[^-0-9.]/g, ""));
   return Number.isFinite(numeric) ? numeric : null;
 }
 
