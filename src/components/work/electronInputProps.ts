@@ -43,4 +43,4 @@ export const editInputStyle: CSSProperties = {
 };
 
 export const editInputClass =
-  "w-full bg-card text-ink border border-hairline rounded-input px-2 py-1 focus:outline-none focus:border-ring focus:ring-2";
+  "w-full bg-card text-ink border border-control rounded-input px-2 py-1";

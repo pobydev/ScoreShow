@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog, session } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, screen, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -28,6 +28,10 @@ if (!gotTheLock) {
       height: 900,
       minWidth: 800,
       minHeight: 600,
+      title: "ScoreShow",
+      backgroundColor: "#f3f6fa",
+      // 창 틀은 앱 화면의 TitleBar가 그립니다 (brand/DESIGN.md).
+      frame: false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -65,11 +69,6 @@ if (!gotTheLock) {
       // 프로덕션 모드: 빌드된 파일
       win.loadFile(path.join(__dirname, "../dist/index.html"));
     }
-
-    // before-input-event 핸들러 제거
-    // 이 핸들러가 모든 키보드 입력을 가로채서 input 필드의 정상 작동을 방해함
-    // 개발자 도구는 F12 키를 누르면 기본적으로 열리므로 별도 핸들러 불필요
-    // 또는 메뉴에서 "도움말" > "개발자 도구"로 열 수 있음
 
     // 창이 준비되면 표시
     win.once("ready-to-show", () => {
@@ -195,74 +194,21 @@ if (!gotTheLock) {
     }
   });
 
-  // 메뉴 생성 함수
-  function createMenu() {
-    const template = [
-      {
-        label: "도움말",
-        submenu: [
-          {
-            label: "ScoreShow 정보",
-            click: () => {
-              const version = app.getVersion();
-              dialog.showMessageBox(win, {
-                type: "info",
-                title: "ScoreShow 정보",
-                message: "ScoreShow",
-                detail: `버전: ${version}\n\n교사용 수행평가 점수 발표 도구\n\nMade with ❤️ by a teacher, for teachers`,
-                buttons: ["확인"],
-              });
-            },
-          },
-          { type: "separator" },
-          {
-            label: "개발자 도구",
-            accelerator: "F12",
-            click: () => {
-              if (win.webContents.isDevToolsOpened()) {
-                win.webContents.closeDevTools();
-              } else {
-                win.webContents.openDevTools();
-              }
-            },
-          },
-          { type: "separator" },
-          {
-            label: "GitHub 저장소",
-            click: () => {
-              require("electron").shell.openExternal("https://github.com/pobydev/ScoreShow");
-            },
-          },
-        ],
-      },
-    ];
-
-    // macOS에서는 첫 번째 메뉴가 앱 이름으로 표시됨
-    if (process.platform === "darwin") {
-      template.unshift({
-        label: app.getName(),
-        submenu: [
-          {
-            label: `${app.getName()} 정보`,
-            click: () => {
-              const version = app.getVersion();
-              dialog.showMessageBox(win, {
-                type: "info",
-                title: `${app.getName()} 정보`,
-                message: app.getName(),
-                detail: `버전: ${version}\n\n교사용 수행평가 점수 발표 도구\n\nMade with ❤️ by a teacher, for teachers`,
-                buttons: ["확인"],
-              });
-            },
-          },
-          { type: "separator" },
-          { role: "quit" },
-        ],
-      });
+  // 창 틀을 직접 그리므로 최소화, 최대화, 닫기를 화면의 버튼에서 받습니다.
+  ipcMain.on("window-action", (_event, action) => {
+    if (!win) return;
+    if (action === "minimize") win.minimize();
+    if (action === "maximize") {
+      if (win.isMaximized()) win.unmaximize();
+      else win.maximize();
     }
+    if (action === "close") win.close();
+  });
 
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
+  ipcMain.handle("get-display-count", () => screen.getAllDisplays().length);
+
+  function sendDisplayCount() {
+    win?.webContents.send("display-count", screen.getAllDisplays().length);
   }
 
   // 앱이 준비되면 창 생성
@@ -271,8 +217,10 @@ if (!gotTheLock) {
     session.defaultSession.setSpellCheckerEnabled(false);
     session.defaultSession.setSpellCheckerLanguages([]);
 
-    createMenu();
+    Menu.setApplicationMenu(null);
     createWindow();
+    screen.on("display-added", sendDisplayCount);
+    screen.on("display-removed", sendDisplayCount);
 
     // macOS: 모든 창이 닫혀도 앱이 계속 실행
     app.on("activate", () => {

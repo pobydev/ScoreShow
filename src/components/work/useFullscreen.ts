@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+export type Fullscreen = ReturnType<typeof useFullscreen>;
 
 export function useFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // 앱이 직접 해제한 것과 Esc로 풀린 것을 구분합니다.
+  const isExitingByApp = useRef(false);
 
   const toggleFullscreen = useCallback(async () => {
     if (!document.fullscreenElement) {
@@ -13,6 +17,7 @@ export function useFullscreen() {
       }
     } else {
       try {
+        isExitingByApp.current = true;
         await document.exitFullscreen();
         setIsFullscreen(false);
       } catch (err) {
@@ -20,12 +25,6 @@ export function useFullscreen() {
       }
     }
   }, []);
-
-  const exitFullscreen = useCallback(() => {
-    if (isFullscreen && document.exitFullscreen) {
-      document.exitFullscreen();
-    }
-  }, [isFullscreen]);
 
   // 전체화면 변경 감지
   useEffect(() => {
@@ -38,5 +37,5 @@ export function useFullscreen() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  return { isFullscreen, toggleFullscreen, exitFullscreen };
+  return { isFullscreen, toggleFullscreen, isExitingByApp };
 }

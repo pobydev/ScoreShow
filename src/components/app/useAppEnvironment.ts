@@ -14,6 +14,26 @@ export function useAppVersion(): string | null {
   return appVersion;
 }
 
+/** 연결된 화면 수. 알 수 없으면 1입니다. */
+export function useDisplayCount(): number {
+  const [count, setCount] = useState(1);
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    let isMounted = true;
+    api?.getDisplayCount?.().then((value) => {
+      if (isMounted) setCount(value);
+    });
+    const unsubscribe = api?.onDisplayCountChange?.(setCount);
+    return () => {
+      isMounted = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  return count;
+}
+
 /** 놓는 칸 밖에 파일을 놓아도 창이 그 파일로 넘어가지 않게 막습니다. */
 export function useBlockStrayFileDrop() {
   useEffect(() => {

@@ -74,7 +74,7 @@ export function StudentScores({ student }: { student: Student }) {
           {student.grade}학년 {student.class}반{" "}
           {student.number}번
         </h1>
-        <h2 className={`${textSize.studentName} font-semibold`}>
+        <h2 className={`${textSize.studentName} font-bold`}>
           {student.name}
         </h2>
       </div>

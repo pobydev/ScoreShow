@@ -25,7 +25,8 @@ const MIME = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".png": "image/png",
-  ".ttf": "font/ttf",
+  ".woff2": "font/woff2",
+  ".otf": "font/otf",
   ".webmanifest": "application/manifest+json",
   ".xlsx": "application/octet-stream",
 };
@@ -63,6 +64,15 @@ export const test = pw.test.extend({
       seed: (students) => seed(page, origin, students),
       key: (name) => page.keyboard.press(name),
       upload: (file) => page.locator('input[type="file"]').setInputFiles(file),
+      /** 파일을 넣고 저장 창에서 이름을 정해 저장합니다. */
+      uploadAndSave: async (file, name) => {
+        await page.locator('input[type="file"]').setInputFiles(file);
+        const input = page.getByLabel("목록 이름");
+        await input.waitFor();
+        if (name) await input.fill(name);
+        await page.getByRole("button", { name: "저장", exact: true }).click();
+        await page.getByRole("heading", { name: "이름을 정해 저장해 주세요" }).waitFor({ state: "detached" });
+      },
     };
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("request", (request) => {
@@ -113,17 +123,10 @@ export function mixedStudents() {
   return students;
 }
 
-/** 첫 학생 id가 비어 고른 학생이 없는 상태 */
-export function noSelectionStudents() {
-  const students = mixedStudents().slice(0, 3);
-  students[0].id = "";
-  return students;
-}
-
 function niceSheet(count) {
   const rows = [
-    ["2025학년도 1학기 수행평가 일람표", "", "", "", "", "", ""],
-    ["2학년 1강의실", "", "", "", "", "", ""],
+    ["2025학년도   1학기   중학교   2학년   1 과학", "", "", "", "", "", ""],
+    ["과목 : 과학", "", "", "", "", "", ""],
     ["반/번호", "성명", "쓰기1 (서·논술)", "", "말하기", "듣기", "비고"],
     ["", "", "만점 10.00", "", "만점 20.00", "만점 5", ""],
   ];
@@ -183,7 +186,7 @@ export function writeTempFile(testInfo, file) {
 
 // ---- 페이지 ----
 
-const encrypt = (students) => CryptoJS.AES.encrypt(JSON.stringify(students), SECRET).toString();
+const encrypt = (data) => CryptoJS.AES.encrypt(JSON.stringify(data), SECRET).toString();
 
 async function writeStorage(page, cipher) {
   await page.evaluate(
@@ -195,8 +198,8 @@ async function writeStorage(page, cipher) {
         open.onerror = () => rejectOpen(open.error);
         open.onsuccess = () => {
           const tx = open.result.transaction("keyval", "readwrite");
+          tx.objectStore("keyval").clear();
           if (cipher) tx.objectStore("keyval").put(cipher, "scoreshow-data");
-          else tx.objectStore("keyval").clear();
           tx.oncomplete = () => {
             open.result.close();
             resolveOpen();
@@ -212,7 +215,41 @@ async function seed(page, origin, students) {
   await page.goto(origin);
   await writeStorage(page, students ? encrypt(students) : null);
   await page.reload();
-  if (students?.length) await page.locator('li[role="button"]').first().waitFor();
+  if (students?.length) {
+    // 1.1.2 자리에 넣은 자료는 목록 하나로 옮겨집니다. 열면 대기 화면으로 시작합니다.
+    await page.getByRole("button", { name: /이전에 저장한 점수.*저장/ }).click();
+    await page.getByText(/대기 중입니다|모든 학생을 보여 주었습니다/).waitFor();
+  }
+}
+
+/** 저장해 둔 목록을 그대로 넣습니다. savedAt으로 오래된 목록을 만들 수 있습니다. */
+export async function seedLists(page, origin, lists) {
+  await page.goto(origin);
+  const entries = lists.map((list, index) => ({
+    id: `seed-${index}`,
+    cipher: encrypt({ name: list.name, savedAt: list.savedAt ?? Date.now(), students: list.students }),
+  }));
+  await page.evaluate(
+    async ({ key, entries }) => {
+      localStorage.setItem("scoreshow-encryption-key", key);
+      await new Promise((resolveOpen, rejectOpen) => {
+        const open = indexedDB.open("keyval-store");
+        open.onupgradeneeded = () => open.result.createObjectStore("keyval");
+        open.onerror = () => rejectOpen(open.error);
+        open.onsuccess = () => {
+          const tx = open.result.transaction("keyval", "readwrite");
+          tx.objectStore("keyval").clear();
+          tx.objectStore("keyval").put(entries, "scoreshow-lists");
+          tx.oncomplete = () => {
+            open.result.close();
+            resolveOpen();
+          };
+        };
+      });
+    },
+    { key: SECRET, entries }
+  );
+  await page.reload();
 }
 
 export async function seedRaw(page, origin, cipher) {
@@ -228,7 +265,7 @@ export function readStoredCipher(page) {
         const open = indexedDB.open("keyval-store");
         open.onerror = () => fail(open.error);
         open.onsuccess = () => {
-          const request = open.result.transaction("keyval").objectStore("keyval").get("scoreshow-data");
+          const request = open.result.transaction("keyval").objectStore("keyval").get("scoreshow-lists");
           request.onsuccess = () => {
             open.result.close();
             done(request.result ?? null);
@@ -252,35 +289,37 @@ export function ui(page) {
   const button = (name) => page.getByRole("button", { name });
   return {
     fileInput: page.locator('input[type="file"]'),
-    /** 파일 선택 창을 여는 것: 지금 화면은 입력칸, 새 화면은 버튼 */
-    filePick: button(/파일 선택|다른 파일 열기/).or(page.getByLabel("Select spreadsheet file")).first(),
-    /** 파일을 놓는 곳: 새 화면의 놓는 칸, 없으면 파일 입력칸 */
-    dropTarget: page.locator('[data-dropzone="true"]').or(page.getByLabel("Select spreadsheet file")).first(),
-    /** 안내 창이 열려 있으면 창 안의 것이 뒤에 옵니다. */
-    template: button(/Download Template|표준 서식 받기/).last(),
-    guide: button(/^사용 안내$/).first(),
+    filePick: button("파일 선택"),
+    dropTarget: page.locator('[data-dropzone="true"]'),
+    template: button("표준 서식 받기"),
+    guide: button(/^스코어쇼 사용 가이드$/).first(),
     search: page.getByLabel("학생 검색"),
-    rows: page.locator('li[role="button"]'),
+    rows: page.locator("[data-student-row]"),
     row: (number, classNumber = 1) =>
       button(new RegExp(`^2학년 ${classNumber}반 ${number}번 `)).filter({ hasText: fakeName(number - 1) }),
-    start: button(/^발표( 모드)? 시작$/),
-    stop: button(/^발표\s?(모드)?\s?종료$/),
-    edit: button(/^(점수 편집 모드 전환|점수 수정|수정 마침)/),
-    remove: button(/데이터 삭제/),
+    wait: button("대기 화면", { exact: true }),
+    waitText: page.getByText(/대기 중입니다|모든 학생을 보여 주었습니다/),
+    showNumber: (number) => page.getByRole("button", { name: `${number}번 점수 보기`, exact: true }),
+    marker: page.locator('li[aria-label="대기 위치"]'),
+    edit: button(/^(점수 수정|수정 마침)/),
+    removeList: button("이 목록 삭제"),
+    removeAll: button("모두 삭제"),
+    confirmDelete: page.getByRole("dialog").getByRole("button", { name: /^(삭제|모두 삭제)$/ }),
+    switcher: page.locator('button[aria-haspopup="menu"]'),
     collapse: button("목록 접기", { exact: true }),
     expand: button("목록 펼치기", { exact: true }),
     exitFullscreen: button("전체화면 해제", { exact: true }),
     alert: page.getByRole("alert"),
-    markers: page.locator('li[aria-label$="마커"]'),
     presenterTitle: page.getByRole("heading", { level: 1, name: /학년/ }),
     areaInputs: page.getByPlaceholder("평가 영역 이름"),
-    numberInputs: page.locator('input[type="number"]'),
+    score: (number, area) => page.getByLabel(`${number}번 ${area} 점수`, { exact: true }),
+    max: (area) => page.getByLabel(`${area} 만점`, { exact: true }),
   };
 }
 
-/** 사용 안내가 창 안에 있는 화면이면 열고, 항상 보이는 화면이면 그대로 둡니다. */
+/** 사용 가이드 창을 엽니다. 다시 읽은 직후에는 메뉴가 그려지기를 기다립니다. */
 export async function openGuideIfAny(app) {
-  if (await app.ui.guide.count()) await app.ui.guide.click();
+  await app.ui.guide.click();
 }
 
 export const bodyText = async (page) => {

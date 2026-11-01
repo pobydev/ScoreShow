@@ -3,11 +3,13 @@
  * 입력칸은 App에 하나만 두고, 시작 화면과 사이드바의 버튼이 함께 씁니다.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useStore } from "../../store/store";
-import type { ColumnMapping } from "../../types";
+import type { ColumnMapping, Student } from "../../types";
 import type { ScoreIssue } from "../../core/normalize";
+import { suggestListName } from "../../core/parser/listName";
+import type { NameHint } from "../../core/parser/listName";
 import { TEMPLATE_FILE_NAME } from "../../core/template";
 import { loadedMessage, uploadRejection } from "./loadMessages";
 
@@ -18,19 +20,19 @@ function readableError(message: string | undefined) {
     : "파일을 읽지 못했습니다. 파일이 손상되지 않았는지 확인해 주세요.";
 }
 
+/** 읽었지만 아직 저장하지 않은 파일. 저장 창에서 이름을 받습니다. */
+export interface PendingUpload {
+  students: Student[];
+  suggestedName: string;
+  message: string;
+  messageDurationMs: number;
+}
+
 export function useFileUpload() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  // 파일 이름은 메모리에만 둡니다. 암호화 저장소 밖에 평문으로 남기지 않습니다.
-  const [fileName, setFileName] = useState<string | null>(null);
-  const { setLoading, setError, setStudents, setMapping } = useStore();
-  const hasStudents = useStore((state) => state.students.length > 0);
-
-  useEffect(() => {
-    if (!hasStudents) {
-      setFileName(null);
-    }
-  }, [hasStudents]);
+  const [pending, setPending] = useState<PendingUpload | null>(null);
+  const { setLoading, setError, setMapping } = useStore();
 
   // 외부 통신 없이 앱에 들어 있는 파일을 받습니다.
   const fetchBundledTemplate = async (): Promise<Blob> => {
@@ -69,28 +71,27 @@ export function useFileUpload() {
           error,
           scoreIssues = [],
           areasWithoutMax = [],
+          nameHint,
         } = e.data as {
           success: boolean;
-          students: Parameters<typeof setStudents>[0];
+          students: Student[];
           mapping: ColumnMapping | null;
           error?: string;
           scoreIssues?: ScoreIssue[];
           areasWithoutMax?: string[];
+          nameHint?: NameHint;
         };
 
         if (success) {
-          await setStudents(students);
           setMapping(mapping ?? null);
-          setFileName(file.name);
-          if (scoreIssues.length > 0 || areasWithoutMax.length > 0) {
+          const hasWarnings = scoreIssues.length > 0 || areasWithoutMax.length > 0;
+          setPending({
+            students,
+            suggestedName: suggestListName(students, nameHint),
+            message: loadedMessage(students.length, scoreIssues, areasWithoutMax),
             // 교사가 학생 번호와 영역을 읽고 찾아볼 수 있도록 오래 보여 줍니다.
-            setError(loadedMessage(students.length, scoreIssues, areasWithoutMax), 15000);
-          } else {
-            setError(loadedMessage(students.length));
-            setTimeout(() => {
-              setError(null);
-            }, 3000);
-          }
+            messageDurationMs: hasWarnings ? 15000 : 3000,
+          });
         } else {
           setError(readableError(error));
         }
@@ -161,7 +162,8 @@ export function useFileUpload() {
   return {
     inputRef,
     isProcessing,
-    fileName,
+    pending,
+    clearPending: () => setPending(null),
     handleFile,
     handleInputChange,
     openFilePicker: () => inputRef.current?.click(),

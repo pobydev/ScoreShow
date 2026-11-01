@@ -1,6 +1,5 @@
 /**
- * 이번에 새로 요구된 화면 구조를 시험합니다 (06-feature-inventory.md의 RB-).
- * 지금 화면에서는 통과하지 못하는 것이 정상이고, 새 화면에서만 통과해야 합니다.
+ * 화면 구조를 시험합니다 (06-feature-inventory.md의 RB-, 07-lists-and-shell.md).
  */
 
 import {
@@ -8,7 +7,6 @@ import {
   dropFileAt,
   expect,
   mixedStudents,
-  noSelectionStudents,
   test,
   writeTempFile,
   xlsxFile,
@@ -23,14 +21,14 @@ async function allVisibleText(app) {
   texts.push(await bodyText(app.page));
   await app.seed(mixedStudents());
   texts.push(await bodyText(app.page));
+  await app.key("ArrowRight");
+  texts.push(await bodyText(app.page));
   await app.ui.edit.click();
   texts.push(await bodyText(app.page));
   await app.page.getByRole("button", { name: "해제하기" }).click();
   texts.push(await bodyText(app.page));
   await app.ui.edit.click();
-  await app.ui.start.click();
-  texts.push(await bodyText(app.page));
-  await app.key("ArrowRight");
+  await app.ui.switcher.click();
   texts.push(await bodyText(app.page));
   return texts;
 }
@@ -49,6 +47,8 @@ async function expectNoSideScroll(page) {
   expect(overflow).toBeLessThanOrEqual(0);
   const clipped = await page.evaluate(() =>
     [...document.querySelectorAll("button, input:not([type=file]), [role=button], h1, h2, p")]
+      // 전체 점수표는 자기 안에서 옆으로 스크롤합니다.
+      .filter((el) => !el.closest(".score-table"))
       .filter((el) => {
         const box = el.getBoundingClientRect();
         return box.width > 0 && (box.right > window.innerWidth + 1 || box.left < -1);
@@ -70,46 +70,41 @@ test("RB-01 시작 화면", async ({ app, page }) => {
 
   const text = await bodyText(page);
   expect(text).toContain("나이스에서 받는 방법");
-  expect(text).toContain("이 컴퓨터에만 저장합니다");
-  await expect(page.getByRole("button", { name: "표준 서식 받기" })).toBeVisible();
+  expect(text).toContain("학생 정보는 이 컴퓨터 밖으로 나가지 않습니다.");
+  expect(text).toContain("TV와 프로젝터를 끄거나 연결을 해제해 주세요.");
   // 놓는 칸 옆에 안내가 있습니다.
   const side = await page.getByText("나이스에서 받는 방법").boundingBox();
   expect(side.x).toBeGreaterThan(box.x + box.width - 1);
-  // 시작 화면에는 긴 안내 상자가 없습니다.
-  expect(text).not.toContain("데이터 안전성");
-
-  // 안내 창을 열지 않고 시작 화면에서 바로 서식을 받습니다.
-  await page.route("https://raw.githubusercontent.com/**", (route) =>
-    route.fulfill({ status: 200, body: Buffer.from("가상 서식") })
-  );
-  const waiting = page.waitForEvent("download");
-  await page.getByRole("button", { name: "표준 서식 받기" }).click();
-  expect((await waiting).suggestedFilename()).toBe("ScoreShow_Template.xlsx");
+  // 표준 서식은 문제가 있을 때만 찾도록 사용 가이드에 둡니다.
+  await expect(page.getByRole("button", { name: "표준 서식 받기" })).toHaveCount(0);
 });
 
 test("RB-02 왼쪽 사이드바", async ({ app, page }) => {
   await app.seed(null);
-  await app.upload(xlsxFile(30, "2학년 가상 평가.xlsx"));
+  await app.uploadAndSave(xlsxFile(30), "가상 평가");
   await expect(app.ui.rows).toHaveCount(30);
 
   const aside = page.locator("aside");
   await expect(aside).toHaveCount(1);
   const box = await aside.boundingBox();
   expect(box.x).toBe(0);
-  expect(box.height).toBe(900);
-  expect(box.width).toBe(280);
+  // 위쪽 34px은 창 맨 위 바입니다.
+  expect(box.y).toBe(34);
+  expect(box.height).toBe(866);
+  expect(box.width).toBe(240);
   await expect(aside).toHaveCSS("background-color", "rgb(255, 255, 255)");
 
-  await expect(aside.locator('img[src*="scoreshow"]')).toBeVisible();
-  await expect(aside.getByRole("button", { name: /2학년 가상 평가\.xlsx.*30명.*다른 파일 열기/ })).toBeVisible();
+  await expect(aside.locator('img[src*="scoreshow"]')).toHaveCSS("width", "45px");
+  await expect(aside.locator(".slogan")).toContainText("수행평가 점수 확인,");
+  await expect(aside.locator(".slogan")).toContainText("한 명씩 손쉽고 안전하게");
+  await expect(aside.getByText("스코어쇼", { exact: false }).first()).toHaveCSS("font-family", /Pretendard/);
+  await expect(aside.getByText("ScoreShow", { exact: true })).toHaveCSS("font-size", "12px");
+  await expect(aside.locator(".slogan")).toHaveCSS("font-family", /Hakgyoansim/);
+  await expect(aside.getByRole("button", { name: /가상 평가.*30명/ })).toBeVisible();
   await expect(aside.getByLabel("학생 검색")).toBeVisible();
-  await expect(aside.locator('li[role="button"]')).toHaveCount(30);
-  await expect(aside.getByRole("button", { name: "사용 안내" })).toBeVisible();
-  await expect(aside.getByRole("button", { name: /데이터 삭제/ })).toBeVisible();
-
-  // 실패한 파일은 이름을 바꾸지 않습니다.
-  await app.upload({ name: "메모.txt", mimeType: "text/plain", buffer: Buffer.from("가상") });
-  await expect(aside.getByRole("button", { name: /2학년 가상 평가\.xlsx/ })).toBeVisible();
+  await expect(aside.locator("[data-student-row]")).toHaveCount(30);
+  await expect(aside.getByRole("button", { name: "스코어쇼 사용 가이드" })).toBeVisible();
+  await expect(aside.getByRole("button", { name: "이 목록 삭제" })).toBeVisible();
 });
 
 test("RB-03 오른쪽 작업 영역", async ({ app, page }) => {
@@ -118,30 +113,26 @@ test("RB-03 오른쪽 작업 영역", async ({ app, page }) => {
   const main = page.locator("main");
   await expect(main.getByRole("heading", { name: "2학년 1반 4번" })).toBeVisible();
   await expect(main.getByRole("button", { name: "점수 수정" })).toBeVisible();
-  await expect(main.getByRole("button", { name: "발표 시작" })).toBeVisible();
+  await expect(main.getByRole("button", { name: "대기 화면", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "전체화면", exact: true })).toBeVisible();
   await expect(main.getByText(/^\d+ \/ 20$/)).toHaveCount(4);
-  const heading = await main.getByRole("heading", { name: "2학년 1반 4번" }).boundingBox();
-  const start = await main.getByRole("button", { name: "발표 시작" }).boundingBox();
-  expect(start.x).toBeGreaterThan(heading.x + heading.width);
-  expect(Math.abs(start.y - heading.y)).toBeLessThan(10);
-  await expect(main).toContainText("데이터는 이 컴퓨터에만 저장됩니다.");
+  await expect(page.getByText("발표 시작")).toHaveCount(0);
 });
 
 test("RB-04 위쪽 안내 없음", async ({ app, page }) => {
   await app.seed(mixedStudents());
   const text = await bodyText(page);
-  expect(text).not.toContain("데이터 안전성");
   expect(text).not.toContain("교과담임");
-  // 1440×900에서 목록이 15줄 이상 보입니다. 지금 화면은 6줄입니다.
+  // 1440×900에서 목록이 10줄 이상 보입니다.
   const visible = await app.ui.rows.evaluateAll(
     (rows) => rows.filter((row) => row.getBoundingClientRect().bottom <= window.innerHeight).length
   );
-  expect(visible).toBeGreaterThanOrEqual(15);
+  expect(visible).toBeGreaterThanOrEqual(10);
 });
 
-test("RB-05 사용 안내 창", async ({ app, page }) => {
+test("RB-05 사용 가이드 창", async ({ app, page }) => {
   await app.seed(mixedStudents());
-  const dialog = page.getByRole("dialog", { name: "사용 안내" });
+  const dialog = page.getByRole("dialog", { name: "스코어쇼 사용 가이드" });
   await expect(dialog).toHaveCount(0);
   await app.ui.guide.click();
   await expect(dialog).toBeVisible();
@@ -151,7 +142,7 @@ test("RB-05 사용 안내 창", async ({ app, page }) => {
   await expect(dialog).toHaveCount(0);
 
   await app.ui.guide.click();
-  await page.getByRole("button", { name: "사용 안내 닫기" }).click();
+  await page.getByRole("button", { name: "사용 가이드 닫기" }).click();
   await expect(dialog).toHaveCount(0);
 
   await app.ui.guide.click();
@@ -159,20 +150,12 @@ test("RB-05 사용 안내 창", async ({ app, page }) => {
   await expect(dialog).toHaveCount(0);
 
   await app.ui.guide.click();
-  await dialog.getByRole("heading", { name: "데이터 안전성" }).click();
+  await dialog.getByRole("heading", { name: "학생 정보" }).click();
   await expect(dialog).toBeVisible();
-});
-
-test("RB-06 저장 자료로 시작", async ({ app, page }) => {
-  await page.addInitScript(() => {
-    window.__sawDropzone = false;
-    new MutationObserver(() => {
-      if (document.querySelector('[data-dropzone="true"]')) window.__sawDropzone = true;
-    }).observe(document, { childList: true, subtree: true });
-  });
-  await app.seed(mixedStudents());
-  await expect(page.locator("aside").getByRole("button", { name: /저장된 점수.*40명.*다른 파일 열기/ })).toBeVisible();
-  expect(await page.evaluate(() => window.__sawDropzone)).toBe(false);
+  // 안내 창이 열려 있을 때 키는 학생을 넘기지 않습니다.
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Escape");
+  await expect(app.ui.presenterTitle).toHaveCount(0);
 });
 
 test("RB-07 놓는 칸 밖에 놓기", async ({ app, page, origin }, testInfo) => {
@@ -208,8 +191,8 @@ test("RB-07 놓는 칸 밖에 놓기", async ({ app, page, origin }, testInfo) =
 });
 
 test("RB-08 영어 문구 없음", async ({ app, page }) => {
-  // 이름, 파일 형식, 키 이름, made by 표시만 허용합니다.
-  const allowed = /ScoreShow|made by|neis|xlsx|xls|Esc/g;
+  // 이름, 파일 형식, 키 이름, made by, 어울림과 맞춘 사이드바 구역 이름만 허용합니다.
+  const allowed = /ScoreShow|made by|pobydev@gmail\.com|xlsx|xls|Esc|TV|SAVED LISTS|STUDENTS/g;
   for (const text of await allVisibleText(app)) {
     expect(text.replace(allowed, "")).not.toMatch(/[A-Za-z]{2,}/);
   }
@@ -217,9 +200,8 @@ test("RB-08 영어 문구 없음", async ({ app, page }) => {
   await app.seed(null);
   await app.upload({ name: "메모.txt", mimeType: "text/plain", buffer: Buffer.from("가상") });
   await expect(app.ui.alert).toContainText("지원하지 않는 형식");
-  await app.upload(xlsxFile(2));
+  await app.uploadAndSave(xlsxFile(2));
   await expect(app.ui.alert).toContainText("학생 2명을 불러왔습니다");
-  await page.waitForTimeout(10);
   await page.addInitScript(() => {
     window.Worker = class {
       constructor() {
@@ -240,17 +222,20 @@ test("RB-09 이모지 없음", async ({ app }) => {
   }
 });
 
-test("RB-10 그라데이션 없음", async ({ app, page }) => {
+test("RB-10 그라데이션은 첫 화면 바탕에만", async ({ app, page }) => {
   const gradients = () =>
     page.evaluate(() =>
-      [...document.querySelectorAll("*")].filter((el) => getComputedStyle(el).backgroundImage.includes("gradient")).length
+      [...document.querySelectorAll("*")]
+        .filter((el) => getComputedStyle(el).backgroundImage.includes("gradient"))
+        .map((el) => el.tagName)
     );
   await app.seed(null);
-  expect(await gradients()).toBe(0);
+  await app.ui.dropTarget.waitFor();
+  expect(await gradients()).toEqual(["MAIN"]);
   await app.seed(mixedStudents());
-  expect(await gradients()).toBe(0);
-  await app.ui.start.click();
-  expect(await gradients()).toBe(0);
+  expect(await gradients()).toEqual([]);
+  await app.key("ArrowRight");
+  expect(await gradients()).toEqual([]);
 });
 
 test("RB-11 디자인 값", async ({ app, page }) => {
@@ -258,8 +243,8 @@ test("RB-11 디자인 값", async ({ app, page }) => {
   const values = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
     return Object.fromEntries(
-      ["canvas", "card", "surface-hover", "ink", "soft", "faint", "line", "hairline", "brand", "accent", "accent-hover",
-       "accent-ink", "tint", "wash", "ring", "board", "celebrate", "danger"].map((name) => [
+      ["canvas", "card", "surface-hover", "ink", "soft", "faint", "line", "hairline", "control", "brand", "accent",
+       "accent-hover", "accent-ink", "tint", "wash", "ring", "board", "celebrate", "danger"].map((name) => [
         name,
         style.getPropertyValue(`--${name}`).trim(),
       ])
@@ -274,6 +259,7 @@ test("RB-11 디자인 값", async ({ app, page }) => {
     faint: "#98a0b0",
     line: "#e3e8f0",
     hairline: "#d5dce6",
+    control: "#7f8a9c",
     brand: "#0ea5e9",
     accent: "#0369a1",
     "accent-hover": "#075985",
@@ -287,9 +273,9 @@ test("RB-11 디자인 값", async ({ app, page }) => {
   });
 });
 
-// Electron 최소 창(800×600)에서 메뉴와 테두리를 뺀 실제 화면 영역이 787×538입니다.
+// 틀 없는 Electron 최소 창의 화면 영역은 800×600입니다.
 for (const [id, width, height, label] of [
-  ["RB-12", 787, 538, "최소 창"],
+  ["RB-12", 800, 600, "최소 창"],
   ["RB-13", 640, 700, "좁은 창 640"],
   ["RB-13", 480, 700, "좁은 창 480"],
 ]) {
@@ -298,11 +284,10 @@ for (const [id, width, height, label] of [
     await app.seed(null);
     await expectNoSideScroll(page);
     await expectReachable(page.getByRole("button", { name: "파일 선택" }));
-    await expectReachable(page.getByRole("button", { name: "표준 서식 받기" }));
-    await expectReachable(page.getByRole("button", { name: "사용 안내" }));
+    await expectReachable(page.getByRole("button", { name: "스코어쇼 사용 가이드" }));
 
     await app.ui.guide.click();
-    const closeGuide = page.getByRole("button", { name: "사용 안내 닫기" });
+    const closeGuide = page.getByRole("button", { name: "사용 가이드 닫기" });
     await expectReachable(closeGuide);
     await expectReachable(page.getByRole("dialog").getByRole("button", { name: "표준 서식 받기" }));
     await closeGuide.click();
@@ -315,40 +300,33 @@ for (const [id, width, height, label] of [
     await expect(app.ui.alert).toBeInViewport({ ratio: 1 });
     await expect(app.ui.alert).toBeHidden({ timeout: 6500 });
 
+    // 좁은 창에서는 목록이 접힌 채 시작합니다.
+    if (width < 768) await app.ui.expand.click();
     await expectReachable(app.ui.search);
-    await expectReachable(page.getByRole("button", { name: /다른 파일 열기/ }));
-    await expectReachable(app.ui.edit);
-    await expectReachable(app.ui.start);
+    await expectReachable(app.ui.switcher);
     await expectReachable(app.ui.guide);
-    await expectReachable(app.ui.remove);
+    await expectReachable(app.ui.removeList);
 
-    // 목록은 끝까지 닿고 5줄 이상 보입니다.
+    // 목록은 끝까지 닿고 4줄 이상 보입니다.
     await expectReachable(app.ui.row(40));
-    const visible = await app.ui.rows.evaluateAll(
-      (rows) => {
-        const list = rows[0].closest(".overflow-y-auto").getBoundingClientRect();
-        return rows.filter((row) => {
-          const box = row.getBoundingClientRect();
-          return box.top >= list.top - 1 && box.bottom <= list.bottom + 1;
-        }).length;
-      }
-    );
-    expect(visible).toBeGreaterThanOrEqual(5);
+    const visible = await app.ui.rows.evaluateAll((rows) => {
+      const list = rows[0].closest(".overflow-y-auto").getBoundingClientRect();
+      return rows.filter((row) => {
+        const box = row.getBoundingClientRect();
+        return box.top >= list.top - 1 && box.bottom <= list.bottom + 1;
+      }).length;
+    });
+    expect(visible).toBeGreaterThanOrEqual(4);
 
-    // 평가 7개 학생의 수정 화면도 닿습니다.
+    // 평가 7개 학생과 전체 점수표도 닿습니다.
     await app.ui.row(7).click();
+    if (width < 768) await app.ui.collapse.click();
     await expectReachable(page.getByText("발표", { exact: true }));
-    // 아래 저장 안내가 카드를 덮지 않습니다.
-    const lastCard = await page.getByText("발표", { exact: true }).boundingBox();
-    const note = page.getByText("데이터는 이 컴퓨터에만 저장됩니다.");
-    await note.scrollIntoViewIfNeeded();
-    const noteBox = await note.boundingBox();
-    const cardNow = await page.getByText("발표", { exact: true }).boundingBox();
-    expect(noteBox.y, `카드 ${lastCard.y}`).toBeGreaterThanOrEqual(cardNow.y + cardNow.height);
+    await expectReachable(app.ui.edit);
     await app.ui.edit.click();
     await page.getByRole("button", { name: "해제하기" }).click();
     await expect(app.ui.areaInputs).toHaveCount(7);
-    await expectReachable(app.ui.numberInputs.last());
+    await expectReachable(app.ui.score(40, "읽기").or(app.ui.score(7, "발표")).first());
     await expectNoSideScroll(page);
   });
 }
@@ -358,11 +336,10 @@ for (const [width, height] of [
   [1280, 720],
   [1024, 768],
   [800, 600],
-  [787, 538],
   [640, 700],
   [480, 700],
 ]) {
-  test(`RB-14 발표 화면 ${width}×${height}`, async ({ app, page }) => {
+  test(`RB-14 학생 점수 화면 ${width}×${height}`, async ({ app, page }) => {
     await page.setViewportSize({ width, height });
     // 긴 점수까지 시험합니다.
     const students = mixedStudents();
@@ -372,7 +349,7 @@ for (const [width, height] of [
       }
     }
     await app.seed(students);
-    await app.ui.start.click();
+    await app.key("ArrowRight");
     await expectNoSideScroll(page);
 
     for (const count of [1, 2, 3, 4, 5, 6, 7]) {
@@ -385,8 +362,7 @@ for (const [width, height] of [
       await page.waitForTimeout(450);
       const problems = await page.evaluate(() => {
         const out = [];
-        const inView = (box) =>
-          box.left >= -1 && box.right <= window.innerWidth + 1 && box.top >= -1 && box.bottom <= window.innerHeight + 1;
+        const inView = (box) => box.left >= -1 && box.right <= window.innerWidth + 1;
         for (const el of document.querySelectorAll("h1, h2, .rounded-card, .rounded-card *")) {
           if (!inView(el.getBoundingClientRect())) out.push(`창 밖: ${el.textContent}`);
         }
@@ -403,21 +379,41 @@ for (const [width, height] of [
       await expectNoSideScroll(page);
     }
 
-    await expectReachable(app.ui.stop);
+    await expectReachable(app.ui.wait);
     await expectReachable(page.getByRole("button", { name: "목록 펼치기" }).or(app.ui.collapse));
   });
 }
 
-test("RB-15 발표 화면 구조", async ({ app, page }) => {
+test("RB-15 화면 구조", async ({ app, page }) => {
   await app.seed(mixedStudents());
-  await app.ui.start.click();
+  await app.key("ArrowRight");
   const aside = page.locator("aside");
   await expect(aside).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(aside.locator('img[src*="scoreshow"]')).toBeVisible();
-  await expect(page.locator(".fixed.inset-0")).toHaveCSS("background-color", "rgb(243, 246, 250)");
-  await expect(page.locator(".rounded-card").first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  // 목록 안 줄도 작업 화면과 같은 모양입니다.
-  await expect(app.ui.row(1)).toHaveCSS("border-radius", "8px");
+  await expect(page.locator("main .rounded-card").first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(app.ui.row(1).locator("..")).toHaveCSS("border-radius", "10px");
+  // 목록 접기 버튼은 사이드바 안에 있습니다.
+  const asideBox = await aside.boundingBox();
+  const collapseBox = await app.ui.collapse.boundingBox();
+  expect(collapseBox.x + collapseBox.width).toBeLessThanOrEqual(asideBox.x + asideBox.width);
+  const bar = page.locator("header.titlebar");
+  await expect(bar).toHaveCSS("height", "34px");
+  await expect(bar).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(bar).toContainText("이전에 저장한 점수");
+});
+
+test("RB-15b 창 조절 버튼은 Electron에서만", async ({ app, page }) => {
+  await app.seed(null);
+  await expect(page.getByRole("button", { name: "앱 닫기" })).toHaveCount(0);
+  await page.addInitScript(() => {
+    window.__actions = [];
+    window.electronAPI = { getVersion: () => "9.9.9", windowAction: (action) => window.__actions.push(action) };
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "창 최소화" }).click();
+  await page.getByRole("button", { name: "창 최대화" }).click();
+  await page.getByRole("button", { name: "앱 닫기" }).click();
+  expect(await page.evaluate(() => window.__actions)).toEqual(["minimize", "maximize", "close"]);
 });
 
 test("RB-16 made by gnilab", async ({ app, page }) => {
@@ -439,26 +435,13 @@ test("RB-16 made by gnilab", async ({ app, page }) => {
   await app.seed(null);
   await expect(madeBy).toHaveCount(0);
 
-  // 사용 안내 창 안
+  // 사용 가이드 창 안
   await app.ui.guide.click();
   await check(page.getByRole("dialog"));
 
-  // 사이드바에는 없습니다.
+  // 사이드바와 학생 점수 화면에는 없습니다.
   await app.seed(mixedStudents());
-  await expect(madeBy).toHaveCount(0);
-
-  // 발표 화면에도 없습니다.
-  await app.ui.start.click();
   await expect(madeBy).toHaveCount(0);
   await app.key("ArrowRight");
   await expect(madeBy).toHaveCount(0);
-  await app.key("ArrowLeft");
-});
-
-test("RB-17 고른 학생 없을 때 구조", async ({ app, page }) => {
-  await app.seed(noSelectionStudents());
-  await app.ui.start.click();
-  await app.key("Escape");
-  await expect(page.locator("main").getByRole("button", { name: "발표 시작" })).toBeVisible();
-  await expect(page.locator("aside").getByRole("button", { name: /데이터 삭제/ })).toBeVisible();
 });

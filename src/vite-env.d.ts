@@ -27,6 +27,9 @@ interface ElectronAPI {
   downloadTemplate: () => Promise<DownloadTemplateResult>;
   getVersion: () => string;
   focusWindow: () => Promise<{ success: boolean; error?: string }>;
+  windowAction?: (action: "minimize" | "maximize" | "close") => void;
+  getDisplayCount?: () => Promise<number>;
+  onDisplayCountChange?: (listener: (count: number) => void) => () => void;
 }
 
 interface Window {

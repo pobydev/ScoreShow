@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearStorage, loadStudents, saveStudents } from "../../src/core/storage-secure";
+import { clearStorage, loadLists, putList, removeLists } from "../../src/core/storage-secure";
+import { waitNeighbors } from "../../src/core/waitFlow";
 import { useStore } from "../../src/store/store";
-import type { Student } from "../../src/types";
+import type { SavedList, Student } from "../../src/types";
 
 vi.mock("../../src/core/storage-secure", () => ({
-  loadStudents: vi.fn(),
-  saveStudents: vi.fn(async () => undefined),
+  loadLists: vi.fn(async () => []),
+  putList: vi.fn(async (list: Omit<SavedList, "id"> & { id?: string }) => ({
+    ...list,
+    id: list.id ?? "새 목록",
+  })),
+  removeLists: vi.fn(async () => undefined),
   clearStorage: vi.fn(async () => undefined),
 }));
 
@@ -27,44 +32,81 @@ const THREE = [student(1), student(2), student(3)];
 const store = () => useStore.getState();
 const evaluationAt = (index: number) => store().students[0].evaluations[index];
 
+async function openThree() {
+  await store().saveList("우리 반", THREE);
+}
+
 beforeEach(() => {
   useStore.setState(useStore.getInitialState(), true);
   vi.clearAllMocks();
 });
 
-describe("setStudents", () => {
-  it("학생을 넣고 첫 학생을 고르고 저장한다", async () => {
-    await store().setStudents(THREE);
-    expect(store().students).toBe(THREE);
-    expect(store().selectedStudentId).toBe("2-1-1");
-    expect(saveStudents).toHaveBeenCalledWith(THREE);
+describe("saveList", () => {
+  it("저장하고 대기 화면으로 연다", async () => {
+    await openThree();
+    expect(store()).toMatchObject({
+      activeListId: "새 목록",
+      students: THREE,
+      selectedStudentId: null,
+      isBlackout: true,
+    });
+    expect(putList).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "우리 반", students: THREE })
+    );
   });
 
-  it("이미 고른 학생이 있어도 첫 학생으로 되돌린다", async () => {
-    await store().setStudents(THREE);
-    store().setSelectedStudent("2-1-3");
-    await store().setStudents(THREE);
-    expect(store().selectedStudentId).toBe("2-1-1");
+  it("이름의 공백을 정리해 저장한다", async () => {
+    await store().saveList("  우리   반 ", THREE);
+    expect(putList).toHaveBeenCalledWith(expect.objectContaining({ name: "우리 반" }));
   });
 
-  it("첫 학생 id가 비었으면 고르지 않는다", async () => {
-    await store().setStudents([{ ...student(1), id: "" }]);
-    expect(store().selectedStudentId).toBeNull();
+  it("같은 이름이면 같은 목록을 덮어쓰고 저장일을 새로 적는다", async () => {
+    useStore.setState({ lists: [{ id: "a", name: "우리 반", savedAt: 1, students: [student(1)] }] });
+    await store().saveList("우리  반", THREE);
+    expect(store().lists).toHaveLength(1);
+    expect(store().lists[0]).toMatchObject({ id: "a", students: THREE });
+    expect((store().lists[0] as SavedList).savedAt).toBeGreaterThan(1);
   });
 
-  it("[Q-17] 빈 목록을 넣어도 기존 학생과 선택과 저장 데이터를 그대로 둔다", async () => {
-    await store().setStudents(THREE);
-    vi.mocked(saveStudents).mockClear();
-    await store().setStudents([]);
-    expect(store().students).toBe(THREE);
-    expect(store().selectedStudentId).toBe("2-1-1");
-    expect(saveStudents).not.toHaveBeenCalled();
+  it("저장이 실패하면 거부되고 목록을 열지 않는다", async () => {
+    vi.mocked(putList).mockRejectedValueOnce(new Error("저장 실패"));
+    await expect(store().saveList("우리 반", THREE)).rejects.toThrow("저장 실패");
+    expect(store()).toMatchObject({ activeListId: null, students: [], lists: [] });
+  });
+});
+
+describe("openList와 closeList", () => {
+  beforeEach(() => {
+    useStore.setState({
+      lists: [
+        { id: "a", name: "가", savedAt: 1, students: THREE },
+        { id: "b", unreadable: true },
+      ],
+    });
   });
 
-  it("저장이 실패하면 거부되지만 메모리 상태는 바뀐 채로 남는다", async () => {
-    vi.mocked(saveStudents).mockRejectedValueOnce(new Error("저장 실패"));
-    await expect(store().setStudents(THREE)).rejects.toThrow("저장 실패");
-    expect(store().students).toBe(THREE);
+  it("열면 고른 학생 없이 대기 화면이고 수정이 닫힌다", () => {
+    useStore.setState({ selectedStudentId: "2-1-2", isEditMode: true, isBlackout: false });
+    store().openList("a");
+    expect(store()).toMatchObject({
+      activeListId: "a",
+      students: THREE,
+      selectedStudentId: null,
+      isBlackout: true,
+      isEditMode: false,
+    });
+  });
+
+  it("읽을 수 없는 목록이나 없는 목록은 열지 않는다", () => {
+    store().openList("b");
+    store().openList("없음");
+    expect(store().activeListId).toBeNull();
+  });
+
+  it("닫으면 메모리의 학생을 비운다", () => {
+    store().openList("a");
+    store().closeList();
+    expect(store()).toMatchObject({ activeListId: null, students: [], selectedStudentId: null });
   });
 });
 
@@ -83,85 +125,74 @@ describe("setError 표시 시간", () => {
   });
 });
 
-describe("학생 이동", () => {
+describe("대기 화면과 학생 보여 주기", () => {
   beforeEach(async () => {
-    await store().setStudents(THREE);
+    await openThree();
   });
 
-  it("nextStudent는 다음 학생으로 가고 마지막에서 멈춘다", () => {
-    store().nextStudent();
+  const neighbors = () => {
+    const { above, below } = waitNeighbors(store().students, store().waitGap);
+    return [above?.number ?? null, below?.number ?? null];
+  };
+
+  it("열면 첫 학생 위에서 기다린다", () => {
+    expect(store()).toMatchObject({ isBlackout: true, waitGap: -1, selectedStudentId: null });
+    expect(neighbors()).toEqual([null, 1]);
+  });
+
+  it("아래 학생을 보여 주고, 앞으로 가면 그 아래 사이로 간다", () => {
+    store().showBelow();
+    expect(store()).toMatchObject({ isBlackout: false, selectedStudentId: "2-1-1" });
+    store().waitAfterCurrent();
+    expect(neighbors()).toEqual([1, 2]);
+  });
+
+  it("뒤로 가면 그 위 사이로 가고 양옆을 볼 수 있다", () => {
+    store().showStudent("2-1-3");
+    store().waitBeforeCurrent();
+    expect(neighbors()).toEqual([2, 3]);
+    store().showAbove();
     expect(store().selectedStudentId).toBe("2-1-2");
-    store().nextStudent();
-    store().nextStudent();
+    store().waitAfterCurrent();
+    store().showBelow();
     expect(store().selectedStudentId).toBe("2-1-3");
   });
 
-  it("prevStudent는 이전 학생으로 가고 처음에서 멈춘다", () => {
-    store().setSelectedStudent("2-1-3");
-    store().prevStudent();
-    expect(store().selectedStudentId).toBe("2-1-2");
-    store().prevStudent();
-    store().prevStudent();
-    expect(store().selectedStudentId).toBe("2-1-1");
+  it("양 끝에서는 없는 쪽을 보여 주지 않는다", () => {
+    store().showAbove();
+    expect(store().isBlackout).toBe(true);
+    store().showStudent("2-1-3");
+    store().waitAfterCurrent();
+    expect(neighbors()).toEqual([3, null]);
+    store().showBelow();
+    expect(store().isBlackout).toBe(true);
   });
 
-  it("선택이 없으면 next는 처음, prev는 마지막으로 간다", () => {
-    store().setSelectedStudent(null);
-    store().nextStudent();
-    expect(store().selectedStudentId).toBe("2-1-1");
-    store().setSelectedStudent(null);
-    store().prevStudent();
-    expect(store().selectedStudentId).toBe("2-1-3");
+  it("이미 대기 화면이면 다시 눌러도 자리를 옮기지 않는다", () => {
+    store().showStudent("2-1-2");
+    store().waitBeforeCurrent();
+    store().waitAfterCurrent();
+    expect(neighbors()).toEqual([1, 2]);
   });
 
-  it("학생이 없으면 움직이지 않는다", () => {
-    useStore.setState({ students: [], selectedStudentId: null });
-    store().nextStudent();
-    store().prevStudent();
-    expect(store().selectedStudentId).toBeNull();
+  it("대기 화면으로 가면 표를 닫는다", () => {
+    store().showStudent("2-1-2");
+    store().setEditMode(true);
+    store().waitAfterCurrent();
+    expect(store().isEditMode).toBe(false);
+    store().setEditMode(true);
+    store().waitAfterCurrent();
+    expect(store().isEditMode).toBe(false);
   });
 
-  it("[Q-30] 없는 학생이 선택돼 있으면 next는 처음으로 가고 prev는 그대로다", () => {
-    store().setSelectedStudent("없음");
-    store().prevStudent();
-    expect(store().selectedStudentId).toBe("없음");
-    store().nextStudent();
-    expect(store().selectedStudentId).toBe("2-1-1");
+  it("학생을 보여 줘도 저장하지 않는다", () => {
+    vi.clearAllMocks();
+    store().showStudent("2-1-1");
+    expect(putList).not.toHaveBeenCalled();
   });
 });
 
-describe("발표 모드와 화면 상태", () => {
-  it("켜면 첫 학생을 고르고 가림을 푼다", async () => {
-    await store().setStudents(THREE);
-    store().setSelectedStudent("2-1-3");
-    store().setBlackout(true);
-    store().setPresenterMode(true);
-    expect(store()).toMatchObject({
-      isPresenterMode: true,
-      isBlackout: false,
-      selectedStudentId: "2-1-1",
-    });
-  });
-
-  it("학생이 없으면 선택 없이 켠다", () => {
-    store().setSelectedStudent("없음");
-    store().setPresenterMode(true);
-    expect(store()).toMatchObject({ isPresenterMode: true, selectedStudentId: null });
-  });
-
-  it("끄면 가림을 풀고 선택은 유지한다", async () => {
-    await store().setStudents(THREE);
-    store().setPresenterMode(true);
-    store().nextStudent();
-    store().setBlackout(true);
-    store().setPresenterMode(false);
-    expect(store()).toMatchObject({
-      isPresenterMode: false,
-      isBlackout: false,
-      selectedStudentId: "2-1-2",
-    });
-  });
-
+describe("화면 상태", () => {
   it("단순 설정 함수는 값만 바꾼다", () => {
     store().setLoading(true);
     store().setEditMode(true);
@@ -208,16 +239,25 @@ describe("setError", () => {
 
 describe("updateEvaluation", () => {
   beforeEach(async () => {
-    await store().setStudents(THREE);
+    await openThree();
     vi.clearAllMocks();
   });
 
-  it("해당 학생의 해당 평가만 바꾸고 저장한다", async () => {
+  it("해당 학생의 해당 평가만 바꾸고 그 목록을 저장한다", async () => {
     await store().updateEvaluation("2-1-1", 1, { score: 5 });
     expect(evaluationAt(1)).toEqual({ area: "말하기", score: 5, maxScore: 20 });
     expect(evaluationAt(0)).toEqual({ area: "듣기", score: 8, maxScore: 10 });
     expect(store().students[1]).toBe(THREE[1]);
-    expect(saveStudents).toHaveBeenCalledWith(store().students);
+    expect(putList).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "새 목록", students: store().students })
+    );
+    expect(store().lists[0]).toMatchObject({ students: store().students });
+  });
+
+  it("저장일은 바꾸지 않는다", async () => {
+    const { savedAt } = store().lists[0] as SavedList;
+    await store().updateEvaluation("2-1-1", 1, { score: 5 });
+    expect((store().lists[0] as SavedList).savedAt).toBe(savedAt);
   });
 
   it("score를 null로 지울 수 있고 NaN도 null이 된다", async () => {
@@ -240,11 +280,6 @@ describe("updateEvaluation", () => {
     }
   });
 
-  it("영역 이름도 바꿀 수 있다", async () => {
-    await store().updateEvaluation("2-1-1", 0, { area: "읽기" });
-    expect(evaluationAt(0).area).toBe("읽기");
-  });
-
   it("[Q-30] 음수, 만점 초과, 무한대 점수를 그대로 받는다", async () => {
     for (const score of [-1, 99, Infinity]) {
       await store().updateEvaluation("2-1-1", 0, { score });
@@ -256,45 +291,78 @@ describe("updateEvaluation", () => {
     await store().updateEvaluation("없음", 0, { score: 1 });
     await store().updateEvaluation("2-1-1", 9, { score: 1 });
     expect(evaluationAt(0).score).toBe(8);
-    expect(saveStudents).toHaveBeenCalledTimes(2);
+    expect(putList).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("영역 전체 바꾸기", () => {
+  beforeEach(async () => {
+    await openThree();
+    vi.clearAllMocks();
+  });
+
+  it("renameArea는 모든 학생의 그 영역 이름을 바꾼다", async () => {
+    await store().renameArea("듣기", "읽기");
+    expect(store().students.every((s) => s.evaluations[0].area === "읽기")).toBe(true);
+    expect(store().students[0].evaluations[1].area).toBe("말하기");
+    expect(putList).toHaveBeenCalledTimes(1);
+  });
+
+  it("setAreaMaxScore는 모든 학생의 그 영역 만점을 바꾸고 점수는 둔다", async () => {
+    await store().setAreaMaxScore("듣기", 15);
+    expect(store().students.every((s) => s.evaluations[0].maxScore === 15)).toBe(true);
+    expect(evaluationAt(0).score).toBe(8);
+    expect(evaluationAt(1).maxScore).toBe(20);
+  });
+
+  it("setAreaMaxScore는 0 이하를 받지 않는다", async () => {
+    await store().setAreaMaxScore("듣기", 0);
+    expect(evaluationAt(0).maxScore).toBe(10);
+    expect(putList).not.toHaveBeenCalled();
   });
 });
 
 describe("저장소 연동", () => {
-  it("loadFromStorage는 불러온 학생과 첫 선택을 넣는다", async () => {
-    vi.mocked(loadStudents).mockResolvedValueOnce(THREE);
+  it("loadFromStorage는 목록만 넣고 어느 것도 열지 않는다", async () => {
+    const lists = [{ id: "a", name: "가", savedAt: 1, students: THREE }];
+    vi.mocked(loadLists).mockResolvedValueOnce(lists);
     await store().loadFromStorage();
-    expect(store()).toMatchObject({ students: THREE, selectedStudentId: "2-1-1" });
+    expect(store()).toMatchObject({ lists, activeListId: null, students: [], selectedStudentId: null });
   });
 
-  it("loadFromStorage는 null이면 상태를 건드리지 않는다", async () => {
-    await store().setStudents(THREE);
-    vi.mocked(loadStudents).mockResolvedValueOnce(null);
-    await store().loadFromStorage();
+  it("deleteLists는 그 목록만 지운다", async () => {
+    await openThree();
+    useStore.setState({
+      lists: [...store().lists, { id: "b", name: "나", savedAt: 1, students: THREE }],
+    });
+    await store().deleteLists(["b"]);
+    expect(removeLists).toHaveBeenCalledWith(["b"]);
+    expect(store().lists).toHaveLength(1);
+    expect(store().activeListId).toBe("새 목록");
+  });
+
+  it("보고 있는 목록을 지우면 닫는다", async () => {
+    await openThree();
+    await store().deleteLists(["새 목록"]);
+    expect(store()).toMatchObject({ lists: [], activeListId: null, students: [] });
+  });
+
+  it("deleteLists는 저장소 삭제가 실패하면 메모리를 지우지 않는다", async () => {
+    await openThree();
+    vi.mocked(removeLists).mockRejectedValueOnce(new Error("삭제 실패"));
+    await expect(store().deleteLists(["새 목록"])).rejects.toThrow("삭제 실패");
     expect(store().students).toBe(THREE);
   });
 
-  it("[Q-30] loadFromStorage가 빈 목록을 받으면 이전 선택이 남는다", async () => {
-    await store().setStudents(THREE);
-    vi.mocked(loadStudents).mockResolvedValueOnce([]);
-    await store().loadFromStorage();
-    expect(store()).toMatchObject({ students: [], selectedStudentId: "2-1-1" });
-  });
-
-  it("saveToStorage는 현재 학생을 저장한다", async () => {
-    await store().setStudents(THREE);
-    vi.clearAllMocks();
-    await store().saveToStorage();
-    expect(saveStudents).toHaveBeenCalledWith(THREE);
-  });
-
-  it("clearAllData는 저장소와 학생, 선택, 매핑, 오류를 지운다", async () => {
-    await store().setStudents(THREE);
+  it("clearAllData는 저장소와 목록, 학생, 선택, 매핑, 오류를 지운다", async () => {
+    await openThree();
     store().setMapping({ name: 1 });
     useStore.setState({ error: "오류" });
     await store().clearAllData();
     expect(clearStorage).toHaveBeenCalledTimes(1);
     expect(store()).toMatchObject({
+      lists: [],
+      activeListId: null,
       students: [],
       selectedStudentId: null,
       mapping: null,
@@ -302,20 +370,8 @@ describe("저장소 연동", () => {
     });
   });
 
-  it("[Q-30] clearAllData는 발표, 가림, 편집 상태를 그대로 둔다", async () => {
-    store().setPresenterMode(true);
-    store().setBlackout(true);
-    store().setEditMode(true);
-    await store().clearAllData();
-    expect(store()).toMatchObject({
-      isPresenterMode: true,
-      isBlackout: true,
-      isEditMode: true,
-    });
-  });
-
   it("clearAllData는 저장소 삭제가 실패하면 메모리를 지우지 않는다", async () => {
-    await store().setStudents(THREE);
+    await openThree();
     vi.mocked(clearStorage).mockRejectedValueOnce(new Error("삭제 실패"));
     await expect(store().clearAllData()).rejects.toThrow("삭제 실패");
     expect(store().students).toBe(THREE);

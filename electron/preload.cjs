@@ -22,5 +22,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   downloadTemplate: () => ipcRenderer.invoke("download-template"),
   getVersion: () => getAppVersion(),
   focusWindow: () => ipcRenderer.invoke("focus-window"),
+  windowAction: (action) => ipcRenderer.send("window-action", action),
+  getDisplayCount: () => ipcRenderer.invoke("get-display-count"),
+  onDisplayCountChange: (listener) => {
+    const relay = (_event, count) => listener(count);
+    ipcRenderer.on("display-count", relay);
+    return () => ipcRenderer.removeListener("display-count", relay);
+  },
 });
 
