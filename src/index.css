@@ -1,20 +1,16 @@
-/* Freesentation: 앱에 함께 넣어 인터넷 없이 씁니다. 파일은 public/fonts/ */
+/* 프리텐다드: 앱에 함께 넣어 인터넷 없이 씁니다. 파일은 public/fonts/ */
 @font-face {
-  font-family: Freesentation;
-  src: url("/fonts/Freesentation-4Regular.ttf") format("truetype");
+  font-family: Pretendard;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 45 920;
+  font-display: swap;
+}
+
+/* 슬로건 전용: 학교안심 받아쓰기체 (SIL OFL 1.1) */
+@font-face {
+  font-family: Hakgyoansim;
+  src: url("/fonts/HakgyoansimBadasseugi-L.otf") format("opentype");
   font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: Freesentation;
-  src: url("/fonts/Freesentation-6SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-display: swap;
-}
-@font-face {
-  font-family: Freesentation;
-  src: url("/fonts/Freesentation-7Bold.ttf") format("truetype");
-  font-weight: 700;
   font-display: swap;
 }
 
@@ -33,6 +29,7 @@
     --faint: #98a0b0;
     --line: #e3e8f0;
     --hairline: #d5dce6;
+    --control: #7f8a9c;
     --brand: #0ea5e9;
     --accent: #0369a1;
     --accent-hover: #075985;
@@ -43,6 +40,7 @@
     --board: #22305a;
     --celebrate: #f2a93b;
     --danger: #c42b31;
+    --danger-wash: #fdeeee;
     --overlay: rgba(30, 42, 74, 0.36);
     --shadow-card: 0 0 0 1px var(--line), 0 1px 3px rgba(30, 42, 74, 0.05);
     --shadow-lift: 0 4px 16px rgba(30, 42, 74, 0.08);
@@ -51,7 +49,7 @@
 
   body {
     margin: 0;
-    font-family: Freesentation, "Malgun Gothic", sans-serif;
+    font-family: Pretendard, "Malgun Gothic", sans-serif;
     font-size: 14px;
     line-height: 22px;
     letter-spacing: -0.01em;
@@ -73,12 +71,17 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
+  input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
   input::placeholder {
-    color: var(--faint);
+    color: var(--soft);
     opacity: 1;
   }
 
@@ -135,24 +138,68 @@
   }
 }
 
-/* 스크롤바 스타일링 */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+/* 스크롤바: 평소에는 보이지 않고 마우스를 올린 곳에서만 나타납니다 (brand/DESIGN.md).
+   scrollbar-width를 쓰면 아래 규칙이 무시되고 기본 스크롤바가 나오므로 쓰지 않습니다. */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: var(--hairline);
-  border-radius: 3px;
-  transition: background-color 0.2s;
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: var(--faint);
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--hairline);
 }
 
-/* Firefox 스크롤바 스타일링 */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--hairline) transparent;
+/* 창 맨 위 바: 끌어서 창을 옮깁니다. */
+.titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.titlebar-controls {
+  -webkit-app-region: no-drag;
+}
+
+.slogan {
+  font-family: Hakgyoansim, Pretendard, sans-serif;
+}
+
+/* 사이드바 구역 이름 */
+.section-label {
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--soft);
+}
+
+/* 첫 화면 바탕의 은은한 빛. 넓은 면에만, 같은 색 계열로만 씁니다 (brand/DESIGN.md). */
+.surface-glow {
+  background-image: radial-gradient(60rem 40rem at 100% 0%, var(--wash), transparent 70%);
+}
+
+/* 전체 점수표 (brand/DESIGN.md 표) */
+.score-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 17px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 400;
+  vertical-align: top;
+}
+.score-table td {
+  padding: 8px 17px;
+  border-bottom: 1px solid var(--line);
+}
+.score-table tbody tr:hover td {
+  background: var(--wash);
 }

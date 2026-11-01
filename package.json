@@ -16,6 +16,7 @@
     "electron:pack": "pnpm build && electron-builder"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "crypto-js": "^4.2.0",
     "idb-keyval": "^6.2.1",
     "react": "^18.2.0",

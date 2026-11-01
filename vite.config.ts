@@ -32,7 +32,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       workbox: {
         // 글꼴도 미리 받아 두어야 오프라인에서 같은 글자로 보입니다.
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,ttf}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,otf}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {

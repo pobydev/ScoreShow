@@ -16,6 +16,7 @@ export default {
       faint: "var(--faint)",
       line: "var(--line)",
       hairline: "var(--hairline)",
+      control: "var(--control)",
       brand: "var(--brand)",
       accent: {
         DEFAULT: "var(--accent)",
@@ -27,11 +28,11 @@ export default {
       ring: "var(--ring)",
       board: "var(--board)",
       celebrate: "var(--celebrate)",
-      danger: "var(--danger)",
+      danger: { DEFAULT: "var(--danger)", wash: "var(--danger-wash)" },
       overlay: "var(--overlay)",
     },
     fontFamily: {
-      sans: ["Freesentation", '"Malgun Gothic"', "sans-serif"],
+      sans: ["Pretendard", '"Malgun Gothic"', "sans-serif"],
     },
     borderRadius: {
       none: "0",
