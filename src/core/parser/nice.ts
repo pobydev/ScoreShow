@@ -17,6 +17,7 @@ import {
   parseClassNumber,
 } from "./shared";
 import type { Grid, ParsedFile } from "./shared";
+import { findNameHint } from "./listName";
 
 /** 한 줄에 한 영역씩 점수가 있음을 나타내는 칸 제목 */
 const SCORE_LABEL = /^(점수|득점|원점수|성취점)$/;
@@ -220,6 +221,7 @@ function readNiceAllAreas(grid: Grid, header: NiceHeader, areas: AreaColumn[]): 
     scoreIssues,
     areasWithoutMax: areas.filter((area) => area.maxScore === null).map((area) => area.name),
     mapping: { class: header.classCol, number: header.classCol, name: header.nameCol },
+    nameHint: findNameHint(grid, header.row),
   };
 }
 
@@ -289,5 +291,6 @@ function readNiceSingleArea(
       name: header.nameCol,
       score: scoreCol,
     },
+    nameHint: findNameHint(grid, header.row, area),
   };
 }

@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { normalizeName } from "../normalize";
 import type { ScoreIssue } from "../normalize";
 import type { ColumnMapping, Evaluation, Student } from "../../types";
+import type { NameHint } from "./listName";
 
 /** 시트를 칸 글자의 2차원 배열로 옮긴 것입니다. 열 번호는 시트의 실제 열 번호와 같습니다. */
 export type Grid = string[][];
@@ -18,6 +19,8 @@ export interface ParsedFile {
   scoreIssues: ScoreIssue[];
   areasWithoutMax: string[];
   mapping: ColumnMapping | null;
+  /** 저장 창의 추천 이름에 쓸 학기, 과목, 영역. 나이스 파일에만 있습니다. */
+  nameHint?: NameHint;
 }
 
 export function readGrid(worksheet: XLSX.WorkSheet): Grid {

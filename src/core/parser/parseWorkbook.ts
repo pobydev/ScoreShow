@@ -7,6 +7,7 @@
 import * as XLSX from "xlsx";
 import type { ScoreIssue } from "../normalize";
 import type { ColumnMapping, Student } from "../../types";
+import type { NameHint } from "./listName";
 import { readNice } from "./nice";
 import { MAX_HEADER_ROWS, readGrid } from "./shared";
 import { readTable } from "./table";
@@ -20,6 +21,7 @@ export type WorkerMessage =
       areasWithoutMax: string[];
       mapping: ColumnMapping | null;
       headerRows?: string[][];
+      nameHint?: NameHint;
     }
   | { success: false; error: string };
 
@@ -68,10 +70,11 @@ function toMessage(
     scoreIssues: ScoreIssue[];
     areasWithoutMax: string[];
     mapping: ColumnMapping | null;
+    nameHint?: NameHint;
   },
   headerRows?: string[][]
 ): WorkerMessage {
-  const { students, scoreIssues, areasWithoutMax, mapping } = parsed;
+  const { students, scoreIssues, areasWithoutMax, mapping, nameHint } = parsed;
 
   if (students.length === 0) {
     return {
@@ -98,5 +101,6 @@ function toMessage(
     areasWithoutMax,
     mapping,
     ...(headerRows ? { headerRows } : {}),
+    ...(nameHint ? { nameHint } : {}),
   };
 }
