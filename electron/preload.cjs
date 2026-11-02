@@ -29,5 +29,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("display-count", relay);
     return () => ipcRenderer.removeListener("display-count", relay);
   },
+  getUpdateInfo: () => ipcRenderer.invoke("update-info"),
+  checkForUpdates: () => ipcRenderer.invoke("update-check"),
+  downloadUpdate: () => ipcRenderer.invoke("update-download"),
+  installUpdate: () => ipcRenderer.invoke("update-install"),
+  onUpdateStatus: (listener) => {
+    const relay = (_event, status) => listener(status);
+    ipcRenderer.on("update-status", relay);
+    return () => ipcRenderer.removeListener("update-status", relay);
+  },
 });
 

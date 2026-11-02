@@ -10,6 +10,8 @@ import { StatusMessage } from "./components/app/StatusMessage";
 import { TitleBar } from "./components/app/TitleBar";
 import { useBlockStrayFileDrop, useAppVersion, useOfflineLog } from "./components/app/useAppEnvironment";
 import { useFileUpload } from "./components/app/useFileUpload";
+import { UpdateNotice } from "./components/app/Updates";
+import { useUpdates } from "./components/app/useUpdates";
 import { HomeScreen } from "./components/home/HomeScreen";
 import { SaveListDialog } from "./components/home/SaveListDialog";
 import { useFullscreen } from "./components/work/useFullscreen";
@@ -26,6 +28,7 @@ function App() {
   const appVersion = useAppVersion();
   const upload = useFileUpload();
   const fullscreen = useFullscreen();
+  const updates = useUpdates();
   // 저장된 자료를 다 읽기 전에 시작 화면이 잠깐 비치지 않게 합니다.
   const [isRestoring, setIsRestoring] = useState(true);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -40,6 +43,7 @@ function App() {
   const statusMessage = error ? <StatusMessage message={error} /> : null;
   const screenStatus = isGuideOpen ? null : statusMessage;
   const openGuide = () => setIsGuideOpen(true);
+  const updateNotice = fullscreen.isFullscreen ? null : <UpdateNotice updates={updates} />;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-canvas">
@@ -70,7 +74,13 @@ function App() {
         )}
 
         {!isLoading && !isRestoring && !activeListName && (
-          <HomeScreen status={screenStatus} upload={upload} onOpenGuide={openGuide} />
+          <HomeScreen
+            status={screenStatus}
+            upload={upload}
+            updateNotice={updateNotice}
+            canCheckUpdates={updates.isSupported}
+            onOpenGuide={openGuide}
+          />
         )}
 
         {!isLoading && !isRestoring && activeListName && (
@@ -78,6 +88,7 @@ function App() {
             status={screenStatus}
             upload={upload}
             fullscreen={fullscreen}
+            updateNotice={updateNotice}
             onOpenGuide={openGuide}
           />
         )}
@@ -87,6 +98,7 @@ function App() {
         <GuideDialog
           appVersion={appVersion}
           status={statusMessage}
+          updates={updates}
           onDownloadTemplate={upload.downloadTemplate}
           onClose={() => setIsGuideOpen(false)}
         />

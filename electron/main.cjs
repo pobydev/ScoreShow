@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, screen, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { setupUpdates } = require("./updater.cjs");
 
 let win = null;
 
@@ -218,6 +219,7 @@ if (!gotTheLock) {
     session.defaultSession.setSpellCheckerLanguages([]);
 
     Menu.setApplicationMenu(null);
+    setupUpdates((status) => win?.webContents.send("update-status", status));
     createWindow();
     screen.on("display-added", sendDisplayCount);
     screen.on("display-removed", sendDisplayCount);

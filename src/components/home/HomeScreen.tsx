@@ -11,6 +11,7 @@ import { ConfirmDialog } from "../app/ModalDialog";
 import { ExternalDisplayNotice } from "../app/ExternalDisplayNotice";
 import type { FileUpload } from "../app/useFileUpload";
 import { dangerSideLink, primaryButton, sideLink } from "../buttonStyles";
+import { privacyNote } from "../../core/updates";
 import { useStore } from "../../store/store";
 import { SavedLists } from "./SavedLists";
 import { StaleListsNotice } from "./StaleListsNotice";
@@ -18,10 +19,14 @@ import { StaleListsNotice } from "./StaleListsNotice";
 export function HomeScreen({
   status,
   upload,
+  updateNotice,
+  canCheckUpdates,
   onOpenGuide,
 }: {
   status: ReactNode;
   upload: FileUpload;
+  updateNotice: ReactNode;
+  canCheckUpdates: boolean;
   onOpenGuide: () => void;
 }) {
   const lists = useStore((state) => state.lists);
@@ -41,6 +46,7 @@ export function HomeScreen({
           <SavedLists now={now} />
         </div>
         <div className="flex-shrink-0 flex flex-col gap-0.5 border-t border-line pt-2">
+          {updateNotice}
           <button type="button" onClick={onOpenGuide} className={sideLink}>
             <Question size={16} />
             스코어쇼 사용 가이드
@@ -112,7 +118,7 @@ export function HomeScreen({
                 <li>조회 후 저장 아이콘을 눌러 xls로 받기</li>
               </ol>
             </div>
-            <p className="text-small text-soft">학생 정보는 이 컴퓨터 밖으로 나가지 않습니다.</p>
+            <p className="text-small text-soft">{privacyNote(canCheckUpdates)}</p>
           </aside>
         </div>
       </main>

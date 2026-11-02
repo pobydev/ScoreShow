@@ -5,6 +5,7 @@
 
 import { ArrowRight, CaretLeft, CaretRight, Question, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useStore } from "../../store/store";
 import { AppBrand } from "../app/AppBrand";
 import { ConfirmDialog } from "../app/ModalDialog";
@@ -17,11 +18,13 @@ export function WorkSidebar({
   isExpanded,
   onExpandedChange,
   upload,
+  updateNotice,
   onOpenGuide,
 }: {
   isExpanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   upload: FileUpload;
+  updateNotice: ReactNode;
   onOpenGuide: () => void;
 }) {
   const activeListId = useStore((state) => state.activeListId);
@@ -62,6 +65,7 @@ export function WorkSidebar({
       </div>
 
       <div className="flex-shrink-0 flex flex-col gap-0.5 border-t border-line pt-2">
+        {updateNotice}
         <button type="button" onClick={onOpenGuide} className={sideLink}>
           <Question size={16} />
           스코어쇼 사용 가이드

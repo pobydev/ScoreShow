@@ -30,6 +30,11 @@ interface ElectronAPI {
   windowAction?: (action: "minimize" | "maximize" | "close") => void;
   getDisplayCount?: () => Promise<number>;
   onDisplayCountChange?: (listener: (count: number) => void) => () => void;
+  getUpdateInfo?: () => Promise<{ updates: "on" | "off"; status: import("./core/updates").UpdateStatus }>;
+  checkForUpdates?: () => Promise<void>;
+  downloadUpdate?: () => Promise<void>;
+  installUpdate?: () => Promise<void>;
+  onUpdateStatus?: (listener: (status: import("./core/updates").UpdateStatus) => void) => () => void;
 }
 
 interface Window {

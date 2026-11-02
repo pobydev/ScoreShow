@@ -5,9 +5,12 @@
 
 import { X } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { privacyNote } from "../../core/updates";
 import { primaryButton } from "../buttonStyles";
 import { MadeBy } from "./MadeBy";
 import { ModalDialog } from "./ModalDialog";
+import { UpdateSection } from "./Updates";
+import type { Updates } from "./useUpdates";
 
 // 오래 읽는 창이라 본문 16px, 진한 색으로 씁니다 (brand/DESIGN.md).
 const STRONG = "font-bold";
@@ -41,11 +44,13 @@ function Shortcut({ keyName, children }: { keyName: string; children: ReactNode 
 export function GuideDialog({
   appVersion,
   status,
+  updates,
   onDownloadTemplate,
   onClose,
 }: {
   appVersion: string | null;
   status: ReactNode;
+  updates: Updates;
   onDownloadTemplate: () => void;
   onClose: () => void;
 }) {
@@ -142,8 +147,10 @@ export function GuideDialog({
 
         <section className={SECTION}>
           <h3 className={HEADING}>학생 정보</h3>
-          <p>학생 정보는 이 컴퓨터 밖으로 나가지 않습니다.</p>
+          <p>{privacyNote(updates.isSupported)}</p>
         </section>
+
+        <UpdateSection updates={updates} bodyClass={SECTION} headingClass={HEADING} />
 
         <p className={BODY}>궁금한 점이나 불편한 점은 pobydev@gmail.com으로 알려 주세요.</p>
 

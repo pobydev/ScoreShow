@@ -27,11 +27,13 @@ export function WorkScreen({
   status,
   upload,
   fullscreen,
+  updateNotice,
   onOpenGuide,
 }: {
   status: ReactNode;
   upload: FileUpload;
   fullscreen: Fullscreen;
+  updateNotice: ReactNode;
   onOpenGuide: () => void;
 }) {
   const { students, selectedStudentId, isBlackout, waitAfterCurrent } = useStore();
@@ -77,6 +79,7 @@ export function WorkScreen({
         isExpanded={isListExpanded}
         onExpandedChange={setIsListExpanded}
         upload={upload}
+        updateNotice={updateNotice}
         onOpenGuide={onOpenGuide}
       />
 
