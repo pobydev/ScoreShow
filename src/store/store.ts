@@ -5,7 +5,7 @@
 import { create } from "zustand";
 import type { Student, AppState, ColumnMapping, Evaluation, SavedList } from "../types";
 import { clearStorage, loadLists, putList, removeLists } from "../core/storage-secure";
-import { findListByName, isReadable, normalizeListName } from "../core/lists";
+import { changeEvaluation, findListByName, isReadable, normalizeListName } from "../core/lists";
 import { waitNeighbors } from "../core/waitFlow";
 
 interface AppStore extends AppState {
@@ -21,6 +21,7 @@ interface AppStore extends AppState {
   ) => Promise<void>;
   renameArea: (area: string, nextArea: string) => Promise<void>;
   setAreaMaxScore: (area: string, maxScore: number) => Promise<void>;
+  restoreAreaMaxScore: (area: string) => Promise<void>;
 
   // 학생 보여 주기
   showStudent: (id: string) => void;
@@ -114,15 +115,14 @@ export const useStore = create<AppStore>((set, get) => {
           const nextMaxScore =
             updates.maxScore === undefined ? evaluation.maxScore : updates.maxScore;
 
-          return {
-            ...evaluation,
+          return changeEvaluation(evaluation, {
             ...updates,
             score: sanitizedScore,
             maxScore:
               typeof nextMaxScore === "number" && nextMaxScore > 0
                 ? nextMaxScore
                 : evaluation.maxScore,
-          };
+          });
         });
 
         return { ...student, evaluations };
@@ -148,7 +148,25 @@ export const useStore = create<AppStore>((set, get) => {
         get().students.map((student) => ({
           ...student,
           evaluations: student.evaluations.map((evaluation) =>
-            evaluation.area === area ? { ...evaluation, maxScore } : evaluation
+            evaluation.area === area
+              ? changeEvaluation(evaluation, { score: evaluation.score, maxScore })
+              : evaluation
+          ),
+        }))
+      );
+    },
+
+    restoreAreaMaxScore: async (area) => {
+      await commitStudents(
+        get().students.map((student) => ({
+          ...student,
+          evaluations: student.evaluations.map((evaluation) =>
+            evaluation.area === area && evaluation.originalMaxScore !== undefined
+              ? changeEvaluation(evaluation, {
+                  score: evaluation.score,
+                  maxScore: evaluation.originalMaxScore,
+                })
+              : evaluation
           ),
         }))
       );

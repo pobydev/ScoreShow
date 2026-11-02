@@ -15,6 +15,10 @@ export interface Evaluation {
   area: string; // 평가 영역명
   score: number | null; // 획득 점수 (null = 미입력)
   maxScore: number; // 만점
+  /** 전체 점수표에서 처음 고치기 전의 점수. 고친 적이 없거나 원래 값으로 돌아오면 없습니다. 표에서만 씁니다. */
+  originalScore?: number | null;
+  /** 전체 점수표에서 처음 고치기 전의 만점. 표에서만 씁니다. */
+  originalMaxScore?: number;
 }
 
 export interface ColumnMapping {

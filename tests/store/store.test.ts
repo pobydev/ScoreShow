@@ -245,7 +245,7 @@ describe("updateEvaluation", () => {
 
   it("해당 학생의 해당 평가만 바꾸고 그 목록을 저장한다", async () => {
     await store().updateEvaluation("2-1-1", 1, { score: 5 });
-    expect(evaluationAt(1)).toEqual({ area: "말하기", score: 5, maxScore: 20 });
+    expect(evaluationAt(1)).toMatchObject({ area: "말하기", score: 5, maxScore: 20 });
     expect(evaluationAt(0)).toEqual({ area: "듣기", score: 8, maxScore: 10 });
     expect(store().students[1]).toBe(THREE[1]);
     expect(putList).toHaveBeenCalledWith(
@@ -270,7 +270,28 @@ describe("updateEvaluation", () => {
 
   it("score를 주지 않으면 그대로 둔다", async () => {
     await store().updateEvaluation("2-1-1", 0, { maxScore: 15 });
-    expect(evaluationAt(0)).toEqual({ area: "듣기", score: 8, maxScore: 15 });
+    expect(evaluationAt(0)).toMatchObject({ area: "듣기", score: 8, maxScore: 15 });
+  });
+
+  it("처음 고칠 때 원래 점수를 적고, 다시 고쳐도 그대로 두며, 돌아오면 지운다", async () => {
+    await store().updateEvaluation("2-1-1", 0, { score: 5 });
+    expect(evaluationAt(0).originalScore).toBe(8);
+    await store().updateEvaluation("2-1-1", 0, { score: 4 });
+    expect(evaluationAt(0).originalScore).toBe(8);
+    await store().updateEvaluation("2-1-1", 0, { score: 8 });
+    expect(evaluationAt(0)).toEqual({ area: "듣기", score: 8, maxScore: 10 });
+  });
+
+  it("같은 값으로 쓰면 표시하지 않는다", async () => {
+    await store().updateEvaluation("2-1-1", 0, { score: 8 });
+    expect(evaluationAt(0)).toEqual({ area: "듣기", score: 8, maxScore: 10 });
+  });
+
+  it("미입력이었던 점수를 고치면 원래 값으로 미입력을 적는다", async () => {
+    await store().updateEvaluation("2-1-1", 0, { score: null });
+    expect(evaluationAt(0).originalScore).toBe(8);
+    await store().updateEvaluation("2-1-1", 0, { score: 8 });
+    expect(evaluationAt(0).originalScore).toBeUndefined();
   });
 
   it("만점이 0 이하이거나 NaN이면 이전 값을 유지한다", async () => {
@@ -313,6 +334,17 @@ describe("영역 전체 바꾸기", () => {
     expect(store().students.every((s) => s.evaluations[0].maxScore === 15)).toBe(true);
     expect(evaluationAt(0).score).toBe(8);
     expect(evaluationAt(1).maxScore).toBe(20);
+  });
+
+  it("setAreaMaxScore는 원래 만점을 적고 restoreAreaMaxScore는 되돌린다", async () => {
+    await store().setAreaMaxScore("듣기", 15);
+    expect(store().students[0].evaluations.find((e) => e.area === "듣기")?.originalMaxScore).toBe(10);
+    await store().setAreaMaxScore("듣기", 18);
+    expect(store().students[0].evaluations.find((e) => e.area === "듣기")?.originalMaxScore).toBe(10);
+    await store().restoreAreaMaxScore("듣기");
+    const restored = store().students[0].evaluations.find((e) => e.area === "듣기");
+    expect(restored?.maxScore).toBe(10);
+    expect(restored?.originalMaxScore).toBeUndefined();
   });
 
   it("setAreaMaxScore는 0 이하를 받지 않는다", async () => {

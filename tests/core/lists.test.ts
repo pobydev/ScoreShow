@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   areaColumns,
+  changeEvaluation,
+  differenceLines,
   differenceText,
   diffStudents,
   findListByName,
@@ -118,5 +120,44 @@ describe("전체 점수표 칸", () => {
 
   it("평가 없는 학생만 있으면 칸이 없다", () => {
     expect(areaColumns([{ ...student(1), evaluations: [] }])).toEqual([]);
+  });
+});
+
+describe("differenceLines", () => {
+  const one = (number: number, classNumber: number, score: number | null, area = "쓰기") => ({
+    id: `2-${classNumber}-${number}`,
+    grade: 2,
+    class: classNumber,
+    number,
+    name: `가상${number}`,
+    evaluations: [{ area, score, maxScore: 20 }],
+  });
+
+  it("다른 학생을 번호와 영역으로 적고 점수는 적지 않는다", () => {
+    const lines = differenceLines([one(1, 1, 5), one(2, 1, 6)], [one(1, 1, 7), one(2, 1, 6)]);
+    expect(lines).toEqual(["1번: 쓰기"]);
+    expect(lines.join()).not.toMatch(/5|7|가상/);
+  });
+
+  it("없어진 학생과 새 학생을 적는다", () => {
+    expect(differenceLines([one(1, 1, 5)], [one(2, 1, 5)])).toEqual([
+      "1번: 새 파일에 없음",
+      "2번: 새 파일에만 있음",
+    ]);
+  });
+
+  it("반이 여럿이면 반도 적는다", () => {
+    expect(differenceLines([one(1, 1, 5), one(1, 2, 5)], [one(1, 1, 5), one(1, 2, 6)])).toEqual([
+      "2반 1번: 쓰기",
+    ]);
+  });
+});
+
+describe("changeEvaluation", () => {
+  it("원래 값이 미입력이어도 기억한다", () => {
+    const changed = changeEvaluation({ area: "쓰기", score: null, maxScore: 20 }, { score: 3, maxScore: 20 });
+    expect(changed.originalScore).toBeNull();
+    const back = changeEvaluation(changed, { score: null, maxScore: 20 });
+    expect("originalScore" in back).toBe(false);
   });
 });
