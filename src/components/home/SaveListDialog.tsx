@@ -5,8 +5,14 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { differenceText, diffStudents, findListByName, isSameContent, normalizeListName } from "../../core/lists";
-import type { StudentsDifference } from "../../core/lists";
+import {
+  differenceLines,
+  differenceText,
+  diffStudents,
+  findListByName,
+  isSameContent,
+  normalizeListName,
+} from "../../core/lists";
 import { useStore } from "../../store/store";
 import type { PendingUpload } from "../app/useFileUpload";
 import { ConfirmDialog, ModalDialog } from "../app/ModalDialog";
@@ -21,7 +27,7 @@ export function SaveListDialog({
 }) {
   const { lists, saveList, openList, setError } = useStore();
   const [name, setName] = useState(pending.suggestedName);
-  const [difference, setDifference] = useState<StudentsDifference | null>(null);
+  const [difference, setDifference] = useState<{ summary: string; lines: string[] } | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
 
   const save = async () => {
@@ -50,7 +56,10 @@ export function SaveListDialog({
       onClose();
       setError("✓ 이미 저장되어 있습니다.");
     } else {
-      setDifference(nextDifference);
+      setDifference({
+        summary: differenceText(nextDifference),
+        lines: differenceLines(existing.students, pending.students),
+      });
     }
   };
 
@@ -63,7 +72,13 @@ export function SaveListDialog({
         onConfirm={() => void save()}
         onCancel={() => setDifference(null)}
       >
-        {differenceText(difference)} 덮어쓰면 점수 수정 내용도 사라집니다. 취소하면 이름을 바꿀 수 있습니다.
+        {difference.summary}
+        <ul className="my-2 max-h-[160px] overflow-y-auto text-small text-ink" aria-label="달라지는 학생과 영역">
+          {difference.lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        덮어쓰면 점수 수정 내용도 사라집니다. 취소하면 이름을 바꿀 수 있습니다.
       </ConfirmDialog>
     );
   }
