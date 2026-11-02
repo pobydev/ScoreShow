@@ -6,6 +6,7 @@ import {
   bodyText,
   dropFileAt,
   expect,
+  makeStudent,
   mixedStudents,
   test,
   writeTempFile,
@@ -382,6 +383,97 @@ for (const [width, height] of [
     await expectReachable(app.ui.wait);
     await expectReachable(page.getByRole("button", { name: "목록 펼치기" }).or(app.ui.collapse));
   });
+}
+
+// 점수 카드: 긴 영역 이름과 소수 점수도 한 줄이고, 점수 위아래 빈칸이 같고, 카드 크기가 같습니다.
+const LONG_AREA = "실험 보고서 및 탐구 과정 평가 (서·논술)";
+const CARD_CASES = {
+  "한 영역": [{ area: "수행평가", score: 18.5, maxScore: 20 }],
+  "긴 이름 한 영역": [{ area: LONG_AREA, score: 18.5, maxScore: 20 }],
+  "다섯 영역": [
+    { area: "탐구1 (서·논술)", score: 18.5, maxScore: 20 },
+    { area: "탐구2 (서·논술)", score: 12.5, maxScore: 20 },
+    { area: "토론", score: 27, maxScore: 30 },
+    { area: "실험", score: 4.5, maxScore: 5 },
+    { area: "보고서", score: null, maxScore: 10 },
+  ],
+  "긴 이름 다섯 영역": [
+    { area: LONG_AREA, score: 18.5, maxScore: 20 },
+    { area: "탐구2 (서·논술)", score: 12.5, maxScore: 20 },
+    { area: "토론", score: 100, maxScore: 100 },
+    { area: "프로젝트 기반 문제 해결 활동", score: 4.5, maxScore: 5 },
+    { area: "보고서", score: 9, maxScore: 10 },
+  ],
+  "일곱 영역": ["탐구1 (서·논술)", "탐구2 (서·논술)", "토론", "실험", "보고서", "듣기", "말하기"].map((area) => ({
+    area,
+    score: 18.5,
+    maxScore: 100,
+  })),
+};
+
+for (const [width, height, fullscreen] of [
+  [800, 600, false],
+  [1366, 768, false],
+  [1920, 1080, false],
+  [1920, 1080, true],
+]) {
+  for (const [label, evaluations] of Object.entries(CARD_CASES)) {
+    test(`RB-14b 점수 카드 ${width}×${height}${fullscreen ? " 전체화면" : ""} ${label}`, async ({ app, page }) => {
+      await page.setViewportSize({ width, height });
+      await app.seed([makeStudent(1, evaluations), makeStudent(2, evaluations)]);
+      await app.key("ArrowRight");
+      await expect(app.ui.presenterTitle).toBeVisible();
+      if (fullscreen) {
+        await app.key("f");
+        await page.waitForFunction(() => document.fullscreenElement);
+      }
+      await page.waitForTimeout(450);
+      const result = await page.evaluate(() => {
+        const lineCount = (element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+        };
+        const cards = [...document.querySelectorAll(".score-card")];
+        const scroller = cards[0].closest(".overflow-y-auto");
+        const parts = cards.map((card) => {
+          const box = card.getBoundingClientRect();
+          const area = card.querySelector(".score-card-area");
+          const score = card.querySelector(".score-card-score");
+          const areaBox = area.getBoundingClientRect();
+          const scoreBox = score.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(score);
+          return {
+            lines: lineCount(area) + lineCount(score),
+            fits: range.getBoundingClientRect().width <= scoreBox.width + 1 && scoreBox.right <= box.right,
+            above: scoreBox.top - areaBox.bottom,
+            below: box.bottom - scoreBox.bottom,
+            width: box.width,
+            height: box.height,
+            areaSize: getComputedStyle(area).fontSize,
+            scoreSize: getComputedStyle(score).fontSize,
+          };
+        });
+        return { parts, overflow: scroller.scrollHeight - scroller.clientHeight };
+      });
+      expect(result.overflow, "세로 스크롤").toBeLessThanOrEqual(0);
+      for (const part of result.parts) {
+        expect(part.lines, "줄 수").toBe(2);
+        expect(part.fits, "점수가 카드 안").toBe(true);
+        expect(Math.abs(part.above - part.below), "점수 위아래 빈칸").toBeLessThanOrEqual(1);
+      }
+      // 칸 너비의 소수점 차이로 글자 크기가 0.1px 안에서 달라질 수 있습니다.
+      const spread = (key) => {
+        const sizes = result.parts.map((part) => parseFloat(part[key]));
+        return Math.max(...sizes) - Math.min(...sizes);
+      };
+      expect(spread("areaSize"), "영역 글자 크기").toBeLessThanOrEqual(0.1);
+      expect(spread("scoreSize"), "점수 글자 크기").toBeLessThanOrEqual(0.1);
+      expect(new Set(result.parts.map((part) => Math.round(part.width))).size, "카드 너비").toBe(1);
+      expect(new Set(result.parts.map((part) => Math.round(part.height))).size, "카드 높이").toBe(1);
+    });
+  }
 }
 
 test("RB-15 화면 구조", async ({ app, page }) => {

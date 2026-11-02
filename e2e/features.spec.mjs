@@ -638,13 +638,13 @@ test.describe("학생 점수 보기", () => {
   test("PV-02 점수 카드", async ({ page }) => {
     await expect(page.getByText("쓰기1", { exact: true })).toBeVisible();
     await expect(page.getByText("3 / 20", { exact: true })).toBeVisible();
-    await expect(page.getByText("15.0%", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^\d+(\.\d+)?%$/)).toHaveCount(0);
   });
 
   test("PV-03 미입력", async ({ app, page }) => {
     await app.ui.row(3).click();
     await expect(page.getByText("미입력", { exact: true })).toBeVisible();
-    await expect(page.getByText(/^\d+\.\d%$/)).toHaveCount(2);
+    await expect(page.getByText(/^\d+ \/ 20$/)).toHaveCount(2);
   });
 
   test("PV-04 만점 0", async ({ app, page }) => {
@@ -911,13 +911,13 @@ test.describe("학생 점수 화면", () => {
 
   // 평가 수별 글자 단계와 칸 수를 고정합니다.
   for (const [count, sizes, columns] of [
-    [1, { info: "96px", name: "72px", area: "48px", score: "128px", percent: "20px" }, 1],
-    [2, { info: "60px", name: "48px", area: "24px", score: "48px", percent: "18px" }, 1],
-    [3, { info: "60px", name: "48px", area: "24px", score: "48px", percent: "18px" }, 2],
-    [4, { info: "48px", name: "36px", area: "24px", score: "48px", percent: "18px" }, 2],
-    [5, { info: "48px", name: "36px", area: "24px", score: "48px", percent: "18px" }, 3],
-    [6, { info: "36px", name: "30px", area: "24px", score: "48px", percent: "18px" }, 3],
-    [7, { info: "36px", name: "30px", area: "24px", score: "48px", percent: "18px" }, 4],
+    [1, { info: "96px", name: "72px", area: "48px", score: "180px" }, 1],
+    [2, { info: "60px", name: "48px", area: "30px", score: "88px" }, 1],
+    [3, { info: "60px", name: "48px", area: "28px", score: "72px" }, 2],
+    [4, { info: "48px", name: "36px", area: "28px", score: "72px" }, 2],
+    [5, { info: "48px", name: "36px", area: "24px", score: "64px" }, 3],
+    [6, { info: "36px", name: "30px", area: "24px", score: "64px" }, 3],
+    [7, { info: "36px", name: "30px", area: "22px", score: "56px" }, 4],
   ]) {
     test(`PR-02 큰 글씨 (평가 ${count}개)`, async ({ app, page }) => {
       await showFirst(app, [makeStudent(1, evals(count)), makeStudent(2, evals(1))]);
@@ -927,7 +927,6 @@ test.describe("학생 점수 화면", () => {
       await expect(page.getByRole("heading", { level: 2, name: fakeName(0) })).toHaveCSS("font-size", sizes.name);
       await expect(area).toHaveCSS("font-size", sizes.area);
       await expect(score).toHaveCSS("font-size", sizes.score);
-      await expect(page.getByText("15.0%", { exact: true })).toHaveCSS("font-size", sizes.percent);
       const xs = await page
         .getByText(/^\d+ \/ 20$/)
         .evaluateAll((els) => els.map((el) => Math.round(el.parentElement.getBoundingClientRect().x)));

@@ -117,13 +117,14 @@
   .presenter-stage {
     zoom: 0.72;
   }
-  /* 카드가 여러 칸이면 "12.5 / 20"이 한 줄에 들어가도록 카드 안쪽을 더 줄입니다. */
-  .presenter-card-tight {
-    padding: 12px;
+  .score-cards {
+    --gap-scale: 0.75;
   }
-  .presenter-card-tight .presenter-card-score {
-    font-size: 36px;
-    line-height: 40px;
+}
+/* 1920×1080처럼 큰 화면에서는 전체를 함께 키웁니다. */
+@media (min-width: 1600px) and (min-height: 900px) {
+  .presenter-stage {
+    zoom: 1.25;
   }
 }
 @media (max-width: 560px) {
@@ -136,6 +137,98 @@
   .presenter-stage-dense {
     zoom: 0.6;
   }
+}
+
+/*
+ * 학생 점수 카드. 영역 이름 위, 이름과 점수 사이, 점수 아래의 빈칸이 모두 --card-gap으로 같습니다.
+ * text-box로 글자 위아래 여백을 잘라 숫자 자체를 기준으로 맞춥니다.
+ * 칸 너비가 --cols를 기준으로 정해지되, 가장 긴 영역 이름이 --area-min으로도 한 줄에 들어가지 않으면
+ * 칸 수를 줄입니다. 글자 크기는 카드 너비(100cqi)와 가장 긴 글자(--area-em, --score-em)로 줄어듭니다.
+ */
+.score-cards {
+  --area-min: 16px;
+  --grid-gap: 24px;
+  display: grid;
+  gap: var(--grid-gap);
+  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(
+      min(
+        100%,
+        max(
+          calc((100% - (var(--cols) - 1) * var(--grid-gap)) / var(--cols) - 0.5px),
+          calc(var(--area-em) * var(--area-min) + 2 * var(--card-gap) * var(--gap-scale, 1))
+        )
+      ),
+      1fr
+    )
+  );
+}
+.score-cards-1 {
+  --cols: 1;
+  --area: 48px;
+  --score: 180px;
+  --card-gap: 48px;
+}
+.score-cards-2 {
+  --cols: 1;
+  --area: 30px;
+  --score: 88px;
+  --card-gap: 32px;
+}
+.score-cards-3 {
+  --cols: 2;
+  --area: 28px;
+  --score: 72px;
+  --card-gap: 32px;
+}
+.score-cards-5 {
+  --cols: 2;
+  --area: 24px;
+  --score: 64px;
+  --card-gap: 30px;
+}
+.score-cards-7 {
+  --cols: 2;
+  --area: 22px;
+  --score: 56px;
+  --card-gap: 24px;
+}
+@media (min-width: 768px) {
+  .score-cards-5,
+  .score-cards-7 {
+    --cols: 3;
+  }
+}
+@media (min-width: 1024px) {
+  .score-cards-7 {
+    --cols: 4;
+  }
+}
+.score-card {
+  container-type: inline-size;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--card-gap) * var(--gap-scale, 1));
+  padding: calc(var(--card-gap) * var(--gap-scale, 1));
+}
+.score-card-area {
+  font-size: var(--area);
+  font-size: max(var(--area-min), min(var(--area), calc(100cqi / var(--area-em))));
+  line-height: 1.2;
+  text-box: trim-both cap alphabetic;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.score-card-score {
+  font-size: var(--score);
+  font-size: min(var(--score), calc(100cqi / var(--score-em)));
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+  white-space: nowrap;
+  margin-block: auto;
 }
 
 /* 스크롤바: 평소에는 보이지 않고 마우스를 올린 곳에서만 나타납니다 (brand/DESIGN.md).

@@ -7,13 +7,18 @@ export function formatScore(evaluation: Evaluation): string {
     : `${evaluation.score} / ${evaluation.maxScore}`;
 }
 
-/** 백분율을 보여 줄 수 있는 평가인지 알려 줍니다. */
-export function hasPercent(
-  evaluation: Evaluation
-): evaluation is Evaluation & { score: number } {
-  return evaluation.maxScore > 0 && evaluation.score !== null;
-}
-
-export function percentOf(evaluation: Evaluation & { score: number }): number {
-  return (evaluation.score / evaluation.maxScore) * 100;
+/**
+ * 글자 폭을 글자 크기(em) 단위로 어림합니다. 점수 카드가 글자 크기를 정할 때 씁니다.
+ * 실제보다 조금 넓게 잡아 카드 안에서 줄이 바뀌거나 넘치지 않게 합니다.
+ */
+export function textWidthEm(text: string): number {
+  let em = 0;
+  for (const char of text) {
+    if (char === " ") em += 0.28;
+    else if (/[0-9]/.test(char)) em += 0.62;
+    else if (/[A-Za-z]/.test(char)) em += 0.68;
+    else if (char.charCodeAt(0) < 128) em += 0.44;
+    else em += 0.92;
+  }
+  return Math.max(em, 1);
 }
