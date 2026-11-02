@@ -145,6 +145,7 @@ test("SL-11 점수 수정은 그 목록에만 저장", async ({ app, page, origi
   await app.ui.edit.click();
   await page.getByRole("button", { name: "해제하기" }).click();
   await app.ui.score(1, "쓰기1").fill("19");
+  await page.keyboard.press("Enter");
   await page.waitForTimeout(150);
 
   await page.reload();

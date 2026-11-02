@@ -697,13 +697,14 @@ test.describe("점수 수정", () => {
     await expect(app.ui.areaInputs).toHaveCount(7);
   });
 
-  test("ED-02 첫 점수 칸 포커스", async ({ app }) => {
+  test("ED-02 처음에는 칸을 고르지 않음", async ({ app, page }) => {
     await unlock(app);
-    await expect(app.ui.score(1, "쓰기1")).toBeFocused();
+    await expect(app.ui.score(1, "쓰기1")).not.toBeFocused();
+    await expect(page.getByRole("region", { name: "전체 점수표" })).toBeFocused();
   });
 
   test("ED-03 수정 안내", async ({ app, page }) => {
-    const help = page.getByText("고친 내용은 자동으로 저장됩니다");
+    const help = page.getByText("칸을 고친 뒤 Enter를 누르거나 다른 칸으로 옮기면 저장됩니다");
     await expect(help).toHaveCount(0);
     await unlock(app);
     await expect(help).toBeVisible();
@@ -745,8 +746,8 @@ test.describe("점수 수정", () => {
   test("ED-06 소수 점수", async ({ app, page }) => {
     await unlock(app);
     const score = app.ui.score(1, "쓰기1");
-    await expect(score).toHaveAttribute("step", "0.5");
-    await expect(score).toHaveAttribute("min", "0");
+    await expect(score).toHaveAttribute("type", "text");
+    await expect(score).toHaveAttribute("inputmode", "decimal");
     await score.click();
     await page.keyboard.press("Control+A");
     await page.keyboard.type("12.5", { delay: 60 });
@@ -772,9 +773,12 @@ test.describe("점수 수정", () => {
     await max.click();
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Delete");
+    await page.keyboard.press("Enter");
     await expect(max).toHaveValue("20");
+    await max.click();
     await page.keyboard.press("Control+A");
     await page.keyboard.type("0");
+    await page.keyboard.press("Enter");
     await expect(max).toHaveValue("20");
     await app.ui.edit.click();
     await app.ui.row(1).click();
@@ -787,6 +791,7 @@ test.describe("점수 수정", () => {
     await max.click();
     await page.keyboard.press("Control+A");
     await page.keyboard.type("30");
+    await page.keyboard.press("Enter");
     await expect(max).toHaveValue("30");
     await app.ui.edit.click();
     await app.ui.row(1).click();
@@ -824,6 +829,7 @@ test.describe("점수 수정", () => {
     await app.ui.score(2, "쓰기1").click();
     await page.keyboard.press("Control+A");
     await page.keyboard.type("11");
+    await page.keyboard.press("Enter");
     await page.waitForTimeout(200);
     await page.reload();
     await page.getByRole("button", { name: /이전에 저장한 점수.*저장/ }).click();
@@ -850,7 +856,7 @@ test.describe("점수 수정", () => {
     await expect(score).toHaveAttribute("autocomplete", "off");
   });
 
-  test("ED-15 화살표 키와 Esc는 표를 닫고 대기 화면으로", async ({ app, page }) => {
+  test("ED-15 왼쪽 오른쪽 키와 Esc는 표를 닫고 대기 화면으로", async ({ app, page }) => {
     await unlock(app);
     await page.evaluate(() => document.activeElement.blur());
     await app.key("ArrowRight");
@@ -859,6 +865,7 @@ test.describe("점수 수정", () => {
 
     await unlock(app);
     // 입력칸 안에서 누른 Esc도 표를 닫습니다.
+    await app.ui.score(1, "쓰기1").click();
     await expect(app.ui.score(1, "쓰기1")).toBeFocused();
     await app.key("Escape");
     await expect(app.ui.areaInputs).toHaveCount(0);
@@ -867,8 +874,9 @@ test.describe("점수 수정", () => {
 
   test("ED-16 입력칸 안의 화살표는 표를 닫지 않음", async ({ app }) => {
     await unlock(app);
-    await expect(app.ui.score(1, "쓰기1")).toBeFocused();
+    await app.ui.score(1, "쓰기1").click();
     await app.key("ArrowUp");
+    await app.key("ArrowRight");
     await expect(app.ui.areaInputs).toHaveCount(7);
   });
 });
