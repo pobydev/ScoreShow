@@ -9,50 +9,17 @@ GitHub Releases를 통한 배포 방법 안내
 - [ ] 사용 가이드 작성 완료
 - [ ] README 업데이트 완료
 
-## 🚀 GitHub Releases 설정 방법
+## 🚀 GitHub Releases 배포 방법
 
-### 1. GitHub 저장소 생성 (아직 없다면)
+저장소는 `pobydev/ScoreShow`입니다. 설치된 앱이 이 저장소(`package.json`의 `build.publish`)에서 새 버전을 찾으므로 계정과 저장소 이름을 바꾸지 않습니다.
 
-1. GitHub에 로그인합니다.
-2. 우측 상단의 **"+"** 버튼 → **"New repository"** 클릭
-3. 저장소 정보 입력:
-   - **Repository name**: `ScoreShow` (또는 원하는 이름)
-   - **Description**: "교사용 수행평가 점수 발표 도구"
-   - **Visibility**: Public (공개) 또는 Private (비공개) 선택
-   - **Initialize this repository with**: README 체크 해제 (이미 있으므로)
-4. **"Create repository"** 클릭
-
-### 2. 로컬 저장소를 GitHub에 연결
-
-```bash
-# Git이 설치되어 있다고 가정
-cd C:\Cursorworkspace\ScoreShow
-
-# Git 초기화 (아직 안 했다면)
-git init
-
-# .gitignore 파일 생성 (선택사항)
-# node_modules, dist, release 등은 제외하는 것이 좋습니다
-
-# 원격 저장소 추가
-git remote add origin https://github.com/pobydev/ScoreShow.git
-
-# 파일 추가 및 커밋
-git add .
-git commit -m "Initial commit: ScoreShow v1.1.0"
-
-# GitHub에 푸시
-git branch -M main
-git push -u origin main
-```
-
-### 3. Release 생성
+### 1. Release 생성
 
 1. GitHub 저장소 페이지로 이동
 2. 우측 메뉴에서 **"Releases"** 클릭
 3. **"Create a new release"** 또는 **"Draft a new release"** 클릭
 
-### 4. 릴리스 정보 입력
+### 2. 릴리스 정보 입력
 
 #### Tag version
 - `v1.2.0`처럼 `package.json`의 버전 앞에 `v`를 붙여 입력
@@ -66,24 +33,24 @@ RELEASE_NOTES.md에서 이번 버전 구역만 복사하여 붙여넣기 (옛 �
 또는 직접 작성:
 
 ```markdown
-## 🎉 첫 릴리스
+## ScoreShow v<버전>
 
-교사용 수행평가 점수 발표 도구를 공개합니다.
+학생이 한 명씩 모니터로 자기 점수를 확인하는 교사용 프로그램입니다.
 
 ### 주요 기능
-- 엑셀 파일 자동 인식 및 컬럼 매핑
-- 발표 모드 (화이트아웃 기능)
+- 나이스 엑셀 파일(.xlsx, .xls)을 읽어 이름을 정해 저장
+- 학생을 한 명씩 보여 주고, 학생 사이에는 점수가 보이지 않는 대기 화면
+- 전체 점수표에서 점수 수정
 - 학생 정보는 이 컴퓨터 밖으로 나가지 않습니다. 인터넷은 새 버전 확인에만 씁니다.
-- 나이스(neis) 엑셀 파일 완벽 지원
 
 ### 다운로드
-Windows 버전을 다운로드하여 설치하세요.
+Windows용 `ScoreShow-Setup-<버전>.exe`를 내려받아 설치합니다.
 
 ### 사용 방법
-자세한 내용은 [사용 가이드](./USER_GUIDE.md)를 참고하세요.
+자세한 내용은 [사용 가이드](https://github.com/pobydev/ScoreShow/blob/main/USER_GUIDE.md)를 참고해 주세요.
 ```
 
-### 5. 파일 업로드
+### 3. 파일 업로드
 
 **릴리스마다 아래 세 파일을 모두 올립니다.** `<버전>`은 `package.json`의 버전입니다.
 
@@ -99,7 +66,7 @@ Windows 버전을 다운로드하여 설치하세요.
 2. 세 파일을 모두 선택. `latest.yml`이 파일 이름을 가리키므로 이름을 바꾸지 않습니다.
 3. 파일이 업로드될 때까지 대기
 
-### 6. 릴리스 발행
+### 4. 릴리스 발행
 
 1. **"Publish release"** 버튼 클릭
 2. 릴리스가 생성되고 다운로드 링크가 공유됩니다.
@@ -125,42 +92,42 @@ https://github.com/pobydev/ScoreShow/releases/latest
 
 **제목:**
 ```
-[공유] 수행평가 점수 발표 도구 - ScoreShow (무료)
+[공유] 수행평가 점수 확인 도구 - ScoreShow (무료)
 ```
 
 **본문:**
 ```
-안녕하세요. 수행평가 점수를 알려주는 과정이 번거로워서 
-작은 프로그램을 만들어봤습니다. 공유하고 싶어 올립니다.
+안녕하세요. 수행평가 점수를 학생에게 한 명씩 확인시키는 과정이 번거로워서
+작은 프로그램을 만들어 봤습니다. 공유하고 싶어 올립니다.
 
 📌 ScoreShow
-교사용 수행평가 점수 발표 도구
+학생이 한 명씩 모니터로 자기 점수를 확인하는 교사용 프로그램입니다.
 
 ✨ 주요 기능
-- 나이스 엑셀 파일 자동 인식
-- 발표 모드로 학생을 한 명씩 개별적으로 표시
-- 화이트아웃 기능으로 자연스러운 전환
-- 학생 정보는 이 컴퓨터 밖으로 나가지 않습니다. 인터넷은 새 버전 확인에만 씁니다.
+- 나이스 엑셀 파일을 읽어 이름을 정해 저장합니다. 다음에는 파일을 다시 넣지 않고 목록에서 고릅니다.
+- 학생을 한 명씩 큰 글씨로 보여 줍니다.
+- 학생 사이에는 점수가 보이지 않는 대기 화면이 나옵니다.
+- 전체 점수표에서 점수를 고칠 수 있고, 고친 내용은 자동으로 저장됩니다.
 
-🔒 보안
-- 모든 데이터는 로컬에만 저장
-- 서버로 데이터 전송 없음
-- 사용 후 데이터 즉시 삭제 가능
+🔒 학생 정보
+- 학생 정보는 이 컴퓨터 밖으로 나가지 않습니다. 인터넷은 새 버전 확인에만 씁니다.
+- 앱을 켜면 저장 목록만 보이고, 목록을 열어도 대기 화면에서 시작합니다.
+- 비밀번호는 없습니다. 확인이 끝나면 저장된 점수를 지워 주세요.
 
 📥 다운로드
-GitHub Releases에서 다운로드하세요:
-[링크 삽입]
+Windows용입니다. GitHub Releases에서 내려받을 수 있습니다.
+https://github.com/pobydev/ScoreShow/releases/latest
 
 📖 사용 방법
-자세한 사용 가이드는 GitHub 저장소에 있습니다.
-[링크 삽입]
+https://github.com/pobydev/ScoreShow/blob/main/USER_GUIDE.md
 
 💡 사용 팁
-- 나이스에서 엑셀 파일을 xls 형식으로 다운로드하세요
-- 발표 모드에서 화살표 키로 학생을 이동할 수 있습니다
-- F 키로 전체화면 모드 전환 가능
+- 시작하기 전에 TV와 프로젝터를 끄거나 연결을 해제해 주세요.
+- 나이스에서 엑셀 파일을 xls 형식으로 받아 주세요.
+- 화살표 키로 대기 화면과 학생을 오갑니다. Esc를 누르면 바로 대기 화면으로 갑니다.
+- F 키로 전체화면을 켜고 끕니다.
 
-문제가 있거나 개선 사항이 있으면 GitHub Issues에 알려주세요.
+문제가 있거나 개선 사항이 있으면 GitHub Issues에 알려 주세요.
 감사합니다!
 ```
 
