@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="교사용 점수 확인 도구 - 학생을 한 명씩 개별적으로 보여주어 비밀을 보호하면서 점수 확인" />
     <meta name="theme-color" content="#f3f6fa" />
-    <!-- CSP: 개발/프로덕션 환경에 따라 자동 설정 -->
-    <!-- 개발: connect-src 허용, 프로덕션: connect-src 'none' (오프라인 강제) -->
+    <!-- CSP: 개발/프로덕션 환경에 따라 vite.config.ts의 cspPlugin이 자동 설정 -->
+    <!-- 개발: 앱 파일과 개발 서버(localhost) 연결만 허용, 프로덕션: connect-src 'self' (앱 파일만 허용) -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src 'self' ws://localhost:* http://localhost:* https://raw.githubusercontent.com; img-src 'self' blob: data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' blob: data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
     />
     <title>ScoreShow</title>
   </head>

@@ -9,10 +9,12 @@ function cspPlugin(): Plugin {
     name: "csp-plugin",
     transformIndexHtml(html, ctx) {
       // 프로덕션 빌드에서만 CSP를 엄격하게 변경
+      // 웹판의 표준 서식 받기가 앱 안의 파일을 fetch로 읽으므로 connect-src는 'none'이 아니라 'self'입니다.
+      // 새 버전 확인은 화면이 아니라 메인 프로세스(electron/updater.cjs)가 하므로 이 정책과 상관없습니다.
       if (ctx.bundle && !ctx.server) {
         return html.replace(
-          /connect-src 'self' ws:\/\/localhost:\* http:\/\/localhost:\* https:\/\/raw\.githubusercontent\.com;/,
-          "connect-src 'self' https://raw.githubusercontent.com;"
+          /connect-src 'self' ws:\/\/localhost:\* http:\/\/localhost:\*;/,
+          "connect-src 'self';"
         ).replace(
           /script-src 'self' 'unsafe-inline' 'unsafe-eval';/,
           "script-src 'self' 'unsafe-inline';"
