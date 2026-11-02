@@ -126,6 +126,11 @@ export function GuideDialog({
             쓰는 분이 열어 볼 수도 있습니다. 아직 확인하지 못한 학생이 있으면 그 반은 남겨 두었다가, 확인이 끝난 뒤 지우면
             됩니다.
           </p>
+          <p>
+            목록 하나는 목록 옆의 휴지통이나 목록을 연 뒤 <strong className={STRONG}>이 목록 삭제</strong>로 지웁니다.
+            목록이 둘 이상이면 처음 화면의 목록 아래 <strong className={STRONG}>모두 지우기</strong>로 한꺼번에 지울 수
+            있습니다.
+          </p>
         </Step>
 
         <div className="flex flex-wrap gap-x-6 gap-y-4 border-y border-line py-[18px]">

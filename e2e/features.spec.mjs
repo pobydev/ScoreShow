@@ -308,6 +308,7 @@ for (const [state, students] of [
       expect(text).toContain("스코어쇼를 여는 사람은 누구나 점수를 볼 수 있습니다");
       expect(text).toContain("다음에 이 컴퓨터를 쓰는 분이");
       expect(text).toContain("아직 확인하지 못한 학생이 있으면 그 반은 남겨 두었다가");
+      expect(text).toContain("처음 화면의 목록 아래 모두 지우기");
       expect(text).not.toContain("엑셀 파일도 지");
     });
 
