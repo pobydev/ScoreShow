@@ -73,7 +73,7 @@ RELEASE_NOTES.md의 내용을 복사하여 붙여넣기
 ### 주요 기능
 - 엑셀 파일 자동 인식 및 컬럼 매핑
 - 발표 모드 (화이트아웃 기능)
-- 100% 오프라인 동작 (개인정보 보호)
+- 학생 정보는 이 컴퓨터 밖으로 나가지 않습니다. 인터넷은 새 버전 확인에만 씁니다.
 - 나이스(neis) 엑셀 파일 완벽 지원
 
 ### 다운로드
@@ -114,7 +114,7 @@ https://github.com/pobydev/ScoreShow/releases/latest
 
 **제목:**
 ```
-[공유] 수행평가 점수 발표 도구 - ScoreShow (무료, 오프라인)
+[공유] 수행평가 점수 발표 도구 - ScoreShow (무료)
 ```
 
 **본문:**
@@ -123,13 +123,13 @@ https://github.com/pobydev/ScoreShow/releases/latest
 작은 프로그램을 만들어봤습니다. 공유하고 싶어 올립니다.
 
 📌 ScoreShow
-교사용 수행평가 점수 발표 도구 (오프라인 전용)
+교사용 수행평가 점수 발표 도구
 
 ✨ 주요 기능
 - 나이스 엑셀 파일 자동 인식
 - 발표 모드로 학생을 한 명씩 개별적으로 표시
 - 화이트아웃 기능으로 자연스러운 전환
-- 100% 오프라인 (개인정보 완벽 보호)
+- 학생 정보는 이 컴퓨터 밖으로 나가지 않습니다. 인터넷은 새 버전 확인에만 씁니다.
 
 🔒 보안
 - 모든 데이터는 로컬에만 저장
@@ -165,15 +165,9 @@ GitHub Releases에서 다운로드하세요:
 
 ## 📌 추가 팁
 
-### 자동 업데이트 설정 (선택사항)
+### 새 버전 확인
 
-Electron Builder의 자동 업데이트 기능을 사용하려면:
-
-1. GitHub Releases를 업데이트 서버로 사용
-2. `electron-updater` 패키지 추가
-3. 업데이트 체크 로직 구현
-
-자세한 내용은 [electron-builder 문서](https://www.electron.build/)를 참고하세요.
+Windows 설치본은 `electron-updater`로 GitHub Releases의 `latest.yml`을 읽습니다. 코드는 `electron/updater.cjs`, 저장소 설정은 `package.json`의 `build.publish`에 있습니다. 1.1.x를 쓰는 분은 새 버전 확인 기능이 없어 한 번은 직접 받아야 합니다.
 
 ### 코드 서명 (선택사항)
 
