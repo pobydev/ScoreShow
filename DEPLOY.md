@@ -55,13 +55,13 @@ git push -u origin main
 ### 4. 릴리스 정보 입력
 
 #### Tag version
-- `v1.1.0` 입력 (또는 원하는 버전)
+- `v1.2.0`처럼 `package.json`의 버전 앞에 `v`를 붙여 입력
 
 #### Release title
-- `ScoreShow v1.1.0` 또는 `ScoreShow v1.1.0 - 새 릴리스`
+- `ScoreShow v1.2.0` 또는 `ScoreShow v1.2.0 - 새 릴리스`
 
 #### Description
-RELEASE_NOTES.md의 내용을 복사하여 붙여넣기
+RELEASE_NOTES.md에서 이번 버전 구역만 복사하여 붙여넣기 (옛 버전 구역은 넣지 않습니다)
 
 또는 직접 작성:
 
@@ -85,21 +85,32 @@ Windows 버전을 다운로드하여 설치하세요.
 
 ### 5. 파일 업로드
 
+**릴리스마다 아래 세 파일을 모두 올립니다.** `<버전>`은 `package.json`의 버전입니다.
+
+| 파일 | 하는 일 |
+| --- | --- |
+| `release/ScoreShow-Setup-<버전>.exe` | 설치 파일 |
+| `release/ScoreShow-Setup-<버전>.exe.blockmap` | 새 버전을 받을 때 바뀐 부분을 찾는 목록 |
+| `release/latest.yml` | 설치된 앱이 새 버전을 찾을 때 읽는 파일 |
+
+`latest.yml`이 빠지면 설치된 앱이 새 버전을 찾지 못합니다. 확인 실패는 화면에 나오지 않으므로 아무도 알아채지 못합니다.
+
 1. **"Attach binaries"** 또는 드래그 앤 드롭 영역 클릭
-2. `release/ScoreShow Setup 1.1.0.exe` 파일 선택
+2. 세 파일을 모두 선택. `latest.yml`이 파일 이름을 가리키므로 이름을 바꾸지 않습니다.
 3. 파일이 업로드될 때까지 대기
 
 ### 6. 릴리스 발행
 
 1. **"Publish release"** 버튼 클릭
 2. 릴리스가 생성되고 다운로드 링크가 공유됩니다.
+3. `https://github.com/pobydev/ScoreShow/releases/latest/download/latest.yml`을 열어 `version`이 새 버전인지 확인합니다.
 
 ## 🔗 릴리스 링크 공유
 
 릴리스가 생성되면 다음과 같은 링크가 생성됩니다:
 
 ```
-https://github.com/pobydev/ScoreShow/releases/tag/v1.1.0
+https://github.com/pobydev/ScoreShow/releases/tag/v1.2.0
 ```
 
 또는 최신 릴리스:
@@ -158,10 +169,13 @@ GitHub Releases에서 다운로드하세요:
 새 버전을 배포할 때:
 
 1. `package.json`의 버전 번호 업데이트
-2. 새로 빌드: `pnpm run electron:pack`
-3. `RELEASE_NOTES.md` 업데이트
-4. GitHub Releases에 새 릴리스 생성
-5. 새 버전 태그로 릴리스 생성
+2. 새로 빌드: `pnpm run electron:pack`. `release/`에 설치 파일, `.blockmap`, `latest.yml`이 만들어집니다.
+3. `RELEASE_NOTES.md` 맨 위에 이번 버전 구역 추가
+4. 새 버전 태그(`v<버전>`)로 GitHub Releases에 릴리스 생성. 설명에는 이번 버전 구역만 붙여넣기
+5. 세 파일 `ScoreShow-Setup-<버전>.exe`, `ScoreShow-Setup-<버전>.exe.blockmap`, `latest.yml`을 모두 업로드
+6. 발행한 뒤 `releases/latest/download/latest.yml`의 `version`이 새 버전인지 확인
+
+**경고:** 코드를 올릴 때는 `git push origin <브랜치>`처럼 브랜치 이름을 적습니다. `git push --all`이나 `git push --mirror`는 쓰지 않습니다. 로컬 ref에 옛 작성자 정보가 남아 있습니다.
 
 ## 📌 추가 팁
 
