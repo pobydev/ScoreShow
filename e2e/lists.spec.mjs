@@ -185,17 +185,77 @@ test("SL-13 보고 있는 목록을 삭제하면 저장 목록으로", async ({ 
   await expect(page.getByRole("button", { name: /가상 2반.*저장/ }).first()).toBeVisible();
 });
 
-test("SL-14 모두 삭제", async ({ app, page, origin }) => {
+const SOFT = "rgb(91, 100, 120)";
+const DANGER = "rgb(196, 43, 49)";
+
+test("SL-14 모두 지우기", async ({ app, page, origin }) => {
   await seedLists(page, origin, [
     { name: "가상 1반", students: CLASS_A },
     { name: "가상 2반", students: CLASS_B },
   ]);
+
+  // 목록 바로 아래 작은 글자이고, 맨 아래 칸에는 없습니다.
+  const list = page.getByRole("list", { name: "저장 목록" });
+  const listBox = await list.boundingBox();
+  const box = await app.ui.removeAll.boundingBox();
+  expect(box.y - (listBox.y + listBox.height)).toBeLessThanOrEqual(8);
+  expect(box.height).toBeGreaterThanOrEqual(32);
+  await expect(app.ui.removeAll).toHaveCSS("font-size", "12px");
+  await expect(app.ui.removeAll).toHaveCSS("color", SOFT);
+  await app.ui.removeAll.hover();
+  await expect(app.ui.removeAll).toHaveCSS("color", DANGER);
+
+  await page.keyboard.press("Tab");
+  await app.ui.removeAll.focus();
+  await expect(app.ui.removeAll).toHaveCSS("outline-style", "solid");
+
   await app.ui.removeAll.click();
-  await expect(page.getByRole("dialog")).toContainText("저장 목록 2개");
+  await expect(page.getByRole("dialog")).toContainText("저장한 목록 2개를 모두 지울까요?");
+  // 위험한 버튼은 채우지 않습니다 (brand/DESIGN.md).
+  await expect(app.ui.confirmDelete).toHaveText("모두 지우기");
+  await expect(app.ui.confirmDelete).toHaveCSS("color", DANGER);
+  await expect(app.ui.confirmDelete).toHaveCSS("border-top-color", DANGER);
+  await expect(app.ui.confirmDelete).toHaveCSS("background-color", "rgb(255, 255, 255)");
+
   await app.ui.confirmDelete.click();
   await expect(page.getByText("아직 저장한 점수가 없습니다.")).toBeVisible();
   await expect.poll(() => readStoredCipher(page)).toBeNull();
 });
+
+test("SL-14b 목록이 하나면 모두 지우기가 없고 휴지통만 있음", async ({ app, page, origin }) => {
+  await seedLists(page, origin, [{ name: "가상 1반", students: CLASS_A }]);
+  await expect(page.getByRole("button", { name: "가상 1반 삭제" })).toBeVisible();
+  await expect(app.ui.removeAll).toHaveCount(0);
+});
+
+for (const [width, height] of [
+  [800, 600],
+  [800, 420],
+  [1440, 900],
+]) {
+  test(`SL-14c 목록이 길어도 모두 지우기와 맨 아래 칸이 보임 ${width}×${height}`, async ({ app, page, origin }) => {
+    await page.setViewportSize({ width, height });
+    await seedLists(
+      page,
+      origin,
+      Array.from({ length: 40 }, (_, index) => ({ name: `가상 ${index + 1}반`, students: CLASS_B }))
+    );
+    const list = page.getByRole("list", { name: "저장 목록" });
+    await expect(list.getByRole("listitem")).toHaveCount(40);
+    await list.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(app.ui.removeAll).toBeInViewport({ ratio: 1 });
+    await expect(app.ui.guide).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
+
+    const guide = await app.ui.guide.boundingBox();
+    const removeAll = await app.ui.removeAll.boundingBox();
+    expect(removeAll.y + removeAll.height).toBeLessThanOrEqual(guide.y);
+    await app.ui.removeAll.click();
+    await expect(page.getByRole("dialog")).toContainText("저장한 목록 40개를 모두 지울까요?");
+  });
+}
 
 test("SL-15 30일이 지나면 지울지 묻고 나중에는 7일 뒤", async ({ page, origin }) => {
   const now = Date.now();

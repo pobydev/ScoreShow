@@ -14,8 +14,9 @@ const CARD = "group flex items-center gap-0.5 rounded-card border border-transpa
 const CARD_ICON = "flex-shrink-0 w-[30px] h-[34px] grid place-items-center rounded-button";
 
 export function SavedLists({ now }: { now: number }) {
-  const { lists, openList, deleteLists } = useStore();
+  const { lists, openList, deleteLists, clearAllData } = useStore();
   const [deleting, setDeleting] = useState<StoredList | null>(null);
+  const [isClearing, setIsClearing] = useState(false);
 
   if (lists.length === 0) {
     return <p className="px-2 text-small text-soft">아직 저장한 점수가 없습니다.</p>;
@@ -26,7 +27,7 @@ export function SavedLists({ now }: { now: number }) {
 
   return (
     <>
-      <ul className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1" aria-label="저장 목록">
+      <ul className="min-h-0 overflow-y-auto flex flex-col gap-1" aria-label="저장 목록">
         {lists.map((list) => (
           <li key={list.id} className={CARD}>
             {isReadable(list) ? (
@@ -72,6 +73,17 @@ export function SavedLists({ now }: { now: number }) {
         ))}
       </ul>
 
+      {/* 목록 칸 밖에 두어 목록이 길어 스크롤되어도 늘 보입니다. 하나뿐이면 줄의 휴지통과 같은 일이라 숨깁니다. */}
+      {lists.length >= 2 && (
+        <button
+          type="button"
+          onClick={() => setIsClearing(true)}
+          className="flex-shrink-0 self-start min-h-[32px] px-2.5 rounded-input text-caption text-soft transition-colors hover:text-danger"
+        >
+          모두 지우기
+        </button>
+      )}
+
       {deleting && (
         <ConfirmDialog
           title="이 목록을 지울까요?"
@@ -85,6 +97,21 @@ export function SavedLists({ now }: { now: number }) {
           }}
         >
           {nameOf(deleting)}을(를) 지웁니다. 되돌릴 수 없습니다.
+        </ConfirmDialog>
+      )}
+
+      {isClearing && (
+        <ConfirmDialog
+          title={`저장한 목록 ${lists.length}개를 모두 지울까요?`}
+          confirmLabel="모두 지우기"
+          danger
+          onCancel={() => setIsClearing(false)}
+          onConfirm={() => {
+            setIsClearing(false);
+            void clearAllData();
+          }}
+        >
+          목록과 점수가 모두 지워지고 되돌릴 수 없습니다.
         </ConfirmDialog>
       )}
     </>

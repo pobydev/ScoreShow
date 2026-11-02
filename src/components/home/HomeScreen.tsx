@@ -3,16 +3,14 @@
  * 왼쪽은 저장 목록, 오른쪽은 파일 넣는 칸입니다. 어느 목록을 고르기 전에는 점수가 보이지 않습니다.
  */
 
-import { ArrowRight, Question, Trash, UploadSimple } from "@phosphor-icons/react";
+import { ArrowRight, Question, UploadSimple } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AppBrand } from "../app/AppBrand";
-import { ConfirmDialog } from "../app/ModalDialog";
 import { ExternalDisplayNotice } from "../app/ExternalDisplayNotice";
 import type { FileUpload } from "../app/useFileUpload";
-import { dangerSideLink, primaryButton, sideLink } from "../buttonStyles";
+import { primaryButton, sideLink } from "../buttonStyles";
 import { privacyNote } from "../../core/updates";
-import { useStore } from "../../store/store";
 import { SavedLists } from "./SavedLists";
 import { StaleListsNotice } from "./StaleListsNotice";
 
@@ -29,10 +27,7 @@ export function HomeScreen({
   canCheckUpdates: boolean;
   onOpenGuide: () => void;
 }) {
-  const lists = useStore((state) => state.lists);
-  const clearAllData = useStore((state) => state.clearAllData);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
   const now = useMemo(() => Date.now(), []);
 
   return (
@@ -52,12 +47,6 @@ export function HomeScreen({
             스코어쇼 사용 가이드
             <ArrowRight size={14} className="ml-auto" />
           </button>
-          {lists.length > 0 && (
-            <button type="button" onClick={() => setIsClearing(true)} className={dangerSideLink}>
-              <Trash size={16} />
-              모두 삭제
-            </button>
-          )}
         </div>
       </aside>
 
@@ -122,21 +111,6 @@ export function HomeScreen({
           </aside>
         </div>
       </main>
-
-      {isClearing && (
-        <ConfirmDialog
-          title="저장된 점수를 모두 지울까요?"
-          confirmLabel="모두 삭제"
-          danger
-          onCancel={() => setIsClearing(false)}
-          onConfirm={() => {
-            setIsClearing(false);
-            void clearAllData();
-          }}
-        >
-          저장 목록 {lists.length}개가 모두 지워지고 되돌릴 수 없습니다.
-        </ConfirmDialog>
-      )}
     </div>
   );
 }
