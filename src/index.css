@@ -19,7 +19,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* 그니랩 공통 디자인 (brand/DESIGN.md). 앱마다 값을 바꾸지 않습니다. */
+  /* gnilab 공통 디자인 (brand/DESIGN.md). 앱마다 값을 바꾸지 않습니다. */
   :root {
     --canvas: #f3f6fa;
     --card: #ffffff;

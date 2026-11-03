@@ -2,7 +2,7 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    // 그니랩 공통 디자인(DESIGN.md)의 값만 쓰도록 기본 색, 모서리, 그림자를 바꿔 끼웁니다.
+    // gnilab 공통 디자인(DESIGN.md)의 값만 쓰도록 기본 색, 모서리, 그림자를 바꿔 끼웁니다.
     // 실제 값은 src/index.css의 CSS 변수에 있습니다.
     colors: {
       transparent: "transparent",
