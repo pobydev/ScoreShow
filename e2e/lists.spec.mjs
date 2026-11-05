@@ -457,7 +457,7 @@ test("MS-07 사용 가이드는 본문 16px, 진한 색", async ({ app, page }) 
   for (const body of [
     dialog.getByText("조회를 누른 뒤 저장 아이콘을"),
     dialog.getByText("점수 파일을 넣고 학생에게"),
-    dialog.getByText("pobydev@gmail.com"),
+    dialog.getByText("hello@gnilab.kr"),
     dialog.getByText("전체화면"),
   ]) {
     await expect(body).toHaveCSS("font-size", "16px");

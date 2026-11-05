@@ -193,7 +193,7 @@ test("RB-07 놓는 칸 밖에 놓기", async ({ app, page, origin }, testInfo) =
 
 test("RB-08 영어 문구 없음", async ({ app, page }) => {
   // 이름, 파일 형식, 키 이름, made by, 어울림과 맞춘 사이드바 구역 이름만 허용합니다.
-  const allowed = /ScoreShow|made by|pobydev@gmail\.com|xlsx|xls|Esc|Enter|TV|SAVED LISTS|STUDENTS/g;
+  const allowed = /ScoreShow|made by|hello@gnilab\.kr|xlsx|xls|Esc|Enter|TV|SAVED LISTS|STUDENTS/g;
   for (const text of await allVisibleText(app)) {
     expect(text.replace(allowed, "")).not.toMatch(/[A-Za-z]{2,}/);
   }
