@@ -1,7 +1,9 @@
-const { app, BrowserWindow, ipcMain, Menu, screen, session } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, screen, session, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { setupUpdates } = require("./updater.cjs");
+
+const GNILAB_URL = "https://gnilab.kr/";
 
 let win = null;
 
@@ -49,7 +51,11 @@ if (!gotTheLock) {
 
     // 새 창을 열지 않고, 앱 화면 밖의 주소로 옮겨 가지 않습니다 (어울림과 같은 방식).
     // 파일을 창에 잘못 끌어다 놓거나 링크를 눌러도 앱 화면이 그대로 남습니다.
-    win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    // 사용 가이드의 made by gnilab만 기본 브라우저로 홈페이지를 엽니다.
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      if (url === GNILAB_URL) void shell.openExternal(GNILAB_URL);
+      return { action: "deny" };
+    });
     win.webContents.on("will-navigate", (event, url) => {
       if (!isSamePage(url, win.webContents.getURL())) event.preventDefault();
     });

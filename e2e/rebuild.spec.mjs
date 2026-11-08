@@ -518,7 +518,9 @@ test("RB-16 made by gnilab", async ({ app, page }) => {
     await expect(mark).toHaveCSS("gap", "5px");
     await expect(mark.getByText("made by", { exact: true })).toHaveCSS("font-size", "12px");
     await expect(mark.getByText("made by", { exact: true })).toHaveCSS("color", "rgb(91, 100, 120)");
-    expect(await mark.evaluate((el) => !!el.closest("a, button"))).toBe(false);
+    // 누르면 홈페이지를 엽니다(2026-11-09). 앱 본체가 이 주소만 기본 브라우저로 넘깁니다.
+    await expect(mark).toHaveAttribute("href", "https://gnilab.kr");
+    await expect(mark).toHaveAttribute("target", "_blank");
     expect(await mark.locator("a, button").count()).toBe(0);
     expect(await logo.evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true);
   };
