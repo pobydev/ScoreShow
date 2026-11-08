@@ -47,6 +47,14 @@ if (!gotTheLock) {
       show: false, // 창이 준비될 때까지 숨김
     });
 
+    // 새 창을 열지 않고, 앱 화면 밖의 주소로 옮겨 가지 않습니다 (어울림과 같은 방식).
+    // 파일을 창에 잘못 끌어다 놓거나 링크를 눌러도 앱 화면이 그대로 남습니다.
+    win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    win.webContents.on("will-navigate", (event, url) => {
+      if (!isSamePage(url, win.webContents.getURL())) event.preventDefault();
+    });
+    win.webContents.on("will-attach-webview", (event) => event.preventDefault());
+
     if (isDev) {
       // 개발 모드: Vite 개발 서버
       // 포트는 자동으로 할당되므로 여러 포트 시도
@@ -85,6 +93,17 @@ if (!gotTheLock) {
     win.on("closed", () => {
       win = null;
     });
+  }
+
+  // 주소 뒤의 #만 다르면 같은 화면으로 봅니다.
+  function isSamePage(target, current) {
+    try {
+      const a = new URL(target);
+      const b = new URL(current);
+      return a.protocol === b.protocol && a.host === b.host && a.pathname === b.pathname;
+    } catch {
+      return false;
+    }
   }
 
   // 템플릿 파일 경로 찾기 헬퍼 함수
