@@ -83,7 +83,7 @@ export function UpdateSection({
   return (
     <section className={bodyClass}>
       <h3 className={headingClass}>새 버전</h3>
-      <p>켤 때 GitHub에서 새 버전이 있는지 확인합니다. 학생 정보는 보내지 않습니다.</p>
+      <p>켤 때 GitHub에서 새 버전이 있는지 확인합니다. 이때 학생 정보는 보내지 않습니다. 컴퓨터 접속 정보(IP 주소 등)와 업데이트 도구가 만든 임의의 번호만 GitHub로 갑니다.</p>
       <CheckOnStartSwitch updates={updates} />
       <div className="mt-1 flex flex-wrap items-center gap-3">
         {action && (
