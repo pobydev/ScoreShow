@@ -75,6 +75,63 @@ describe("saveList", () => {
   });
 });
 
+describe("saveLists", () => {
+  beforeEach(() => {
+    let next = 0;
+    vi.mocked(putList).mockImplementation(async (list) => ({ ...list, id: list.id ?? `새 목록 ${++next}` }));
+  });
+  // 다른 시험은 새 목록의 id를 "새 목록"으로 봅니다.
+  afterEach(() => {
+    vi.mocked(putList).mockImplementation(async (list) => ({ ...list, id: list.id ?? "새 목록" }));
+  });
+
+  it("여러 목록을 차례로 저장하고 화면은 옮기지 않는다", async () => {
+    const saved = await store().saveLists([
+      { name: "1반", students: [student(1)] },
+      { name: " 2반 ", students: [student(2)] },
+    ]);
+    expect(saved).toBe(2);
+    expect(store().lists.map((list) => (list as SavedList).name)).toEqual(["1반", "2반"]);
+    expect(store().activeListId).toBeNull();
+  });
+
+  it("같은 이름이면 그 자리에 덮어쓴다", async () => {
+    useStore.setState({ lists: [{ id: "a", name: "1반", savedAt: 1, students: [student(1)] }] });
+    await store().saveLists([{ name: "1반", students: THREE }]);
+    expect(store().lists).toHaveLength(1);
+    expect(store().lists[0]).toMatchObject({ id: "a", students: THREE });
+  });
+
+  it("지금 연 목록을 덮어쓰면 새 내용으로 대기 화면부터 다시 연다", async () => {
+    useStore.setState({ lists: [{ id: "a", name: "1반", savedAt: 1, students: [student(1)] }] });
+    store().openList("a");
+    store().showStudent("2-1-1");
+    await store().saveLists([{ name: "1반", students: THREE }]);
+    expect(store()).toMatchObject({ activeListId: "a", students: THREE, isBlackout: true });
+  });
+
+  it("다른 목록을 열어 둔 채 저장하면 보던 화면을 그대로 둔다", async () => {
+    useStore.setState({ lists: [{ id: "a", name: "1반", savedAt: 1, students: [student(1)] }] });
+    store().openList("a");
+    store().showStudent("2-1-1");
+    await store().saveLists([{ name: "2반", students: THREE }]);
+    expect(store()).toMatchObject({ activeListId: "a", selectedStudentId: "2-1-1", isBlackout: false });
+  });
+
+  it("중간에 저장이 실패하면 거기까지 센다", async () => {
+    vi.mocked(putList)
+      .mockImplementationOnce(async (list) => ({ ...list, id: "첫째" }))
+      .mockRejectedValueOnce(new Error("저장 실패"));
+    const saved = await store().saveLists([
+      { name: "1반", students: [student(1)] },
+      { name: "2반", students: [student(2)] },
+      { name: "3반", students: [student(3)] },
+    ]);
+    expect(saved).toBe(1);
+    expect(store().lists.map((list) => (list as SavedList).name)).toEqual(["1반"]);
+  });
+});
+
 describe("openList와 closeList", () => {
   beforeEach(() => {
     useStore.setState({

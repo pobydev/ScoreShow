@@ -1,5 +1,5 @@
 /**
- * 목록을 연 뒤의 왼쪽 사이드바: 로고, 지금 연 목록, 검색, 학생 목록, 사용 가이드, 이 목록 삭제
+ * 목록을 연 뒤의 왼쪽 사이드바: 로고, 지금 연 목록, 검색, 학생 목록, 파일 넣는 칸, 사용 가이드, 이 목록 삭제
  * 넓은 창에서는 자리를 차지하고, 좁은 창에서는 점수 위에 펼쳐집니다.
  */
 
@@ -13,15 +13,18 @@ import type { FileUpload } from "../app/useFileUpload";
 import { dangerSideLink, sideLink } from "../buttonStyles";
 import { StudentList } from "../StudentList";
 import { ListSwitcher } from "./ListSwitcher";
+import { SidebarDropZone } from "./SidebarDropZone";
 
 export function WorkSidebar({
   isExpanded,
   onExpandedChange,
   upload,
+  isDraggingFiles,
   updateNotice,
   onOpenGuide,
 }: {
   isExpanded: boolean;
+  isDraggingFiles: boolean;
   onExpandedChange: (expanded: boolean) => void;
   upload: FileUpload;
   updateNotice: ReactNode;
@@ -29,6 +32,9 @@ export function WorkSidebar({
 }) {
   const activeListId = useStore((state) => state.activeListId);
   const deleteLists = useStore((state) => state.deleteLists);
+  const isEditMode = useStore((state) => state.isEditMode);
+  // 파일을 끌고 오는 동안에는 놓는 칸이 학생 목록 자리를 씁니다. 목록은 검색어를 잃지 않게 숨기기만 합니다.
+  const isDropZoneLarge = isDraggingFiles && !isEditMode;
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!isExpanded) {
@@ -60,9 +66,11 @@ export function WorkSidebar({
 
       <ListSwitcher upload={upload} />
 
-      <div className="flex-1 min-h-0">
+      <div className={isDropZoneLarge ? "hidden" : "flex-1 min-h-0"}>
         <StudentList />
       </div>
+
+      <SidebarDropZone upload={upload} isDraggingFiles={isDraggingFiles} isEditMode={isEditMode} />
 
       <div className="flex-shrink-0 flex flex-col gap-0.5 border-t border-line pt-2">
         {updateNotice}

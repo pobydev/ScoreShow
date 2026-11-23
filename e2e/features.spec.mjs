@@ -64,7 +64,8 @@ test.describe("파일 올리기", () => {
     const chooser = app.page.waitForEvent("filechooser");
     await app.ui.filePick.click();
     const opened = await chooser;
-    expect(opened.isMultiple()).toBe(false);
+    // 반마다 받은 파일을 한꺼번에 고를 수 있습니다.
+    expect(opened.isMultiple()).toBe(true);
   });
 
   test("UP-02 xlsx 올리기", async ({ app }) => {

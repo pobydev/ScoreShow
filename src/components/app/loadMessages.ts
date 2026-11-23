@@ -38,17 +38,27 @@ function issueText(issues: ScoreIssue[]) {
   return `확인이 필요한 점수 ${issues.length}건: ${listed}${rest > 0 ? ` 외 ${rest}명` : ""}`;
 }
 
+/** 점수에서 확인할 것. 없으면 null입니다. */
+export function warningText(issues: ScoreIssue[] = [], areasWithoutMax: string[] = []): string | null {
+  const parts: string[] = [];
+  if (issues.length > 0) parts.push(issueText(issues));
+  if (areasWithoutMax.length > 0) {
+    parts.push(`만점을 찾지 못해 100점으로 둔 영역: ${areasWithoutMax.join(", ")}`);
+  }
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 export function loadedMessage(
   count: number,
   issues: ScoreIssue[] = [],
   areasWithoutMax: string[] = []
 ) {
-  const parts = [`${SUCCESS_MARK} 학생 ${count}명을 불러왔습니다.`];
-  if (issues.length > 0) parts.push(issueText(issues));
-  if (areasWithoutMax.length > 0) {
-    parts.push(`만점을 찾지 못해 100점으로 둔 영역: ${areasWithoutMax.join(", ")}`);
-  }
-  return parts.join(" ");
+  const warning = warningText(issues, areasWithoutMax);
+  return `${SUCCESS_MARK} 학생 ${count}명을 불러왔습니다.${warning ? ` ${warning}` : ""}`;
+}
+
+export function successMessage(text: string) {
+  return `${SUCCESS_MARK} ${text}`;
 }
 
 export function isSuccessMessage(message: string) {

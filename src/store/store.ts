@@ -35,6 +35,8 @@ interface AppStore extends AppState {
   // Lists
   loadFromStorage: () => Promise<void>;
   saveList: (name: string, students: Student[]) => Promise<void>;
+  /** 여러 목록을 차례로 저장하고, 저장한 수를 돌려줍니다. 지금 화면은 옮기지 않습니다. */
+  saveLists: (entries: { name: string; students: Student[] }[]) => Promise<number>;
   openList: (id: string) => void;
   closeList: () => void;
   deleteLists: (ids: string[]) => Promise<void>;
@@ -65,6 +67,24 @@ export const useStore = create<AppStore>((set, get) => {
       lists: lists.map((list) => (list.id === active.id ? next : list)),
     });
     await putList(next);
+  };
+
+  /** 같은 이름이 있으면 그 자리에, 없으면 새로 저장합니다. 화면은 옮기지 않습니다. */
+  const storeList = async (name: string, students: Student[]) => {
+    const existing = findListByName(get().lists, name);
+    const saved = await putList({
+      id: existing?.id,
+      name: normalizeListName(name),
+      savedAt: Date.now(),
+      students,
+    });
+    const { lists } = get();
+    set({
+      lists: existing
+        ? lists.map((list) => (list.id === saved.id ? saved : list))
+        : [...lists, saved],
+    });
+    return saved;
   };
 
   const currentIndex = () => {
@@ -206,20 +226,26 @@ export const useStore = create<AppStore>((set, get) => {
 
     /** 같은 이름의 목록이 있으면 덮어씁니다. 덮어쓸지 묻는 것은 저장 창의 일입니다. */
     saveList: async (name, students) => {
-      const existing = findListByName(get().lists, name);
-      const saved = await putList({
-        id: existing?.id,
-        name: normalizeListName(name),
-        savedAt: Date.now(),
-        students,
-      });
-      const { lists } = get();
-      set({
-        lists: existing
-          ? lists.map((list) => (list.id === saved.id ? saved : list))
-          : [...lists, saved],
-      });
+      const saved = await storeList(name, students);
       get().openList(saved.id);
+    },
+
+    saveLists: async (entries) => {
+      const { activeListId } = get();
+      let count = 0;
+      let replacedActive = false;
+      try {
+        for (const { name, students } of entries) {
+          const saved = await storeList(name, students);
+          if (saved.id === activeListId) replacedActive = true;
+          count++;
+        }
+      } catch {
+        // 저장한 데까지 세어 돌려줍니다. 알리는 것은 저장 창의 일입니다.
+      }
+      // 지금 연 목록을 덮어썼으면 새 내용으로, 대기 화면부터 다시 엽니다.
+      if (replacedActive && activeListId) get().openList(activeListId);
+      return count;
     },
 
     // 열었을 때 점수가 바로 보이지 않도록 첫 학생 위의 대기 화면으로 시작합니다.

@@ -123,15 +123,15 @@ export function mixedStudents() {
   return students;
 }
 
-function niceSheet(count) {
+function niceSheet(count, classNumber = 1) {
   const rows = [
-    ["2025학년도   1학기   중학교   2학년   1 과학", "", "", "", "", "", ""],
+    [`2025학년도   1학기   중학교   2학년   ${classNumber} 과학`, "", "", "", "", "", ""],
     ["과목 : 과학", "", "", "", "", "", ""],
     ["반/번호", "성명", "쓰기1 (서·논술)", "", "말하기", "듣기", "비고"],
     ["", "", "만점 10.00", "", "만점 20.00", "만점 5", ""],
   ];
   for (let i = 0; i < count; i++) {
-    rows.push([`1/${i + 1}`, fakeName(i), (i % 10) + 0.5, "", (i * 3) % 21, i % 6, ""]);
+    rows.push([`${classNumber}/${i + 1}`, fakeName(i), (i % 10) + 0.5, "", (i * 3) % 21, i % 6, ""]);
   }
   const sheet = XLSX.utils.aoa_to_sheet(rows);
   sheet["!merges"] = ["A1:G1", "A2:G2", "C3:D3", "C4:D4"].map((r) => XLSX.utils.decode_range(r));
@@ -142,11 +142,11 @@ function niceSheet(count) {
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-export function xlsxFile(count, name = "가상 수행평가.xlsx") {
+export function xlsxFile(count, name = "가상 수행평가.xlsx", classNumber = 1) {
   return {
     name,
     mimeType: XLSX_MIME,
-    buffer: Buffer.from(XLSX.write(niceSheet(count), { type: "array", bookType: "xlsx" })),
+    buffer: Buffer.from(XLSX.write(niceSheet(count, classNumber), { type: "array", bookType: "xlsx" })),
   };
 }
 
@@ -275,14 +275,34 @@ export function readStoredCipher(page) {
   );
 }
 
-/** 브라우저에 진짜 파일 끌어다 놓기 신호를 보냅니다. */
-export async function dropFileAt(page, path, x, y) {
+/** 브라우저에 진짜 파일 끌어다 놓기 신호를 보냅니다. 경로는 하나나 여럿(폴더 포함)을 줍니다. */
+export async function dropFileAt(page, paths, x, y) {
   const cdp = await page.context().newCDPSession(page);
-  const data = { items: [], files: [path], dragOperationsMask: 1 };
+  const data = { items: [], files: [paths].flat(), dragOperationsMask: 1 };
   await cdp.send("Input.dispatchDragEvent", { type: "dragEnter", x, y, data });
+  await cdp.send("Input.dispatchDragEvent", { type: "dragOver", x, y, data });
+  // 사람이 끌 때는 dragover가 계속 옵니다. 놓는 칸이 커지며 다시 그려진 뒤의 dragover도 한 번 보냅니다.
+  await new Promise((done) => setTimeout(done, 50));
   await cdp.send("Input.dispatchDragEvent", { type: "dragOver", x, y, data });
   await cdp.send("Input.dispatchDragEvent", { type: "drop", x, y, data });
   await cdp.detach();
+}
+
+/** 파일을 쥐고 창 위에 멈춰 있게 합니다. 돌려받은 함수로 놓지 않고 끝냅니다. */
+export async function holdFilesAt(page, paths, x, y) {
+  const cdp = await page.context().newCDPSession(page);
+  const data = { items: [], files: [paths].flat(), dragOperationsMask: 1 };
+  await cdp.send("Input.dispatchDragEvent", { type: "dragEnter", x, y, data });
+  await cdp.send("Input.dispatchDragEvent", { type: "dragOver", x, y, data });
+  // 사람이 쥐고 있을 때처럼 dragover를 계속 보냅니다.
+  const timer = setInterval(() => {
+    cdp.send("Input.dispatchDragEvent", { type: "dragOver", x, y, data }).catch(() => {});
+  }, 200);
+  return async () => {
+    clearInterval(timer);
+    await cdp.send("Input.dispatchDragEvent", { type: "dragCancel", x, y, data });
+    await cdp.detach();
+  };
 }
 
 export function ui(page) {

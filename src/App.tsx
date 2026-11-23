@@ -13,6 +13,7 @@ import { useFileUpload } from "./components/app/useFileUpload";
 import { UpdateNotice } from "./components/app/Updates";
 import { useUpdates } from "./components/app/useUpdates";
 import { HomeScreen } from "./components/home/HomeScreen";
+import { BatchSaveDialog } from "./components/home/BatchSaveDialog";
 import { SaveListDialog } from "./components/home/SaveListDialog";
 import { useFullscreen } from "./components/work/useFullscreen";
 import { WorkScreen } from "./components/work/WorkScreen";
@@ -51,6 +52,7 @@ function App() {
         ref={upload.inputRef}
         type="file"
         accept=".xlsx,.xls"
+        multiple
         onChange={upload.handleInputChange}
         disabled={upload.isProcessing}
         className="hidden"
@@ -107,6 +109,8 @@ function App() {
       {upload.pending && (
         <SaveListDialog pending={upload.pending} onClose={upload.clearPending} />
       )}
+
+      {upload.batch && <BatchSaveDialog batch={upload.batch} onClose={upload.clearBatch} />}
     </div>
   );
 }

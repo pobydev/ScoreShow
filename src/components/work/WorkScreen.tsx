@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useStore } from "../../store/store";
 import { ConfirmDialog } from "../app/ModalDialog";
 import { ExternalDisplayNotice } from "../app/ExternalDisplayNotice";
+import { useWindowFileDrag } from "../app/useFileDrop";
 import type { FileUpload } from "../app/useFileUpload";
 import { secondaryButton } from "../buttonStyles";
 import { ScoreTable } from "./ScoreTable";
@@ -36,8 +37,10 @@ export function WorkScreen({
   updateNotice: ReactNode;
   onOpenGuide: () => void;
 }) {
-  const { students, selectedStudentId, isBlackout, waitAfterCurrent } = useStore();
+  const { students, selectedStudentId, isBlackout, isEditMode, waitAfterCurrent } = useStore();
   const [isListExpanded, setIsListExpanded] = useState(startsExpanded);
+  // 접어 둔 목록은 파일을 끌고 오는 동안만 펼쳐 놓는 칸을 보여 줍니다.
+  const isDraggingFiles = useWindowFileDrag();
   const edit = useEditMode();
   useScoreKeyboard({ onToggleFullscreen: fullscreen.toggleFullscreen });
 
@@ -76,9 +79,10 @@ export function WorkScreen({
   return (
     <div className="relative h-full flex">
       <WorkSidebar
-        isExpanded={isListExpanded}
+        isExpanded={isListExpanded || (isDraggingFiles && !isEditMode)}
         onExpandedChange={setIsListExpanded}
         upload={upload}
+        isDraggingFiles={isDraggingFiles}
         updateNotice={updateNotice}
         onOpenGuide={onOpenGuide}
       />

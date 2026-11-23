@@ -4,10 +4,11 @@
  */
 
 import { ArrowRight, Question, UploadSimple } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { AppBrand } from "../app/AppBrand";
 import { ExternalDisplayNotice } from "../app/ExternalDisplayNotice";
+import { useFileDropTarget } from "../app/useFileDrop";
 import type { FileUpload } from "../app/useFileUpload";
 import { primaryButton, sideLink } from "../buttonStyles";
 import { privacyNote } from "../../core/updates";
@@ -27,7 +28,7 @@ export function HomeScreen({
   canCheckUpdates: boolean;
   onOpenGuide: () => void;
 }) {
-  const [isDragOver, setIsDragOver] = useState(false);
+  const drop = useFileDropTarget(upload);
   const now = useMemo(() => Date.now(), []);
 
   return (
@@ -56,34 +57,16 @@ export function HomeScreen({
         <StaleListsNotice now={now} />
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-5">
           <section
-            data-dropzone="true"
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-              setIsDragOver(true);
-            }}
-            onDragLeave={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                setIsDragOver(false);
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDragOver(false);
-              const file = event.dataTransfer.files[0];
-              if (file) {
-                upload.handleFile(file);
-              }
-            }}
+            {...drop.props}
             className={`min-h-[240px] rounded-window border-2 flex flex-col items-center justify-center gap-2 p-6 text-center transition-colors ${
-              isDragOver ? "border-solid border-brand bg-wash" : "border-dashed border-hairline bg-card"
+              drop.isOver ? "border-solid border-brand bg-wash" : "border-dashed border-hairline bg-card"
             }`}
           >
             <span className="flex items-center justify-center h-14 w-14 rounded-card bg-tint text-accent-ink mb-1">
               <UploadSimple size={30} weight="duotone" aria-hidden="true" />
             </span>
             <p className="text-title font-bold text-ink">나이스 점수 파일을 여기에 놓아 주세요</p>
-            <p className="text-body text-soft mb-3">xls, xlsx 파일을 쓸 수 있습니다.</p>
+            <p className="text-body text-soft mb-3">xls, xlsx 파일을 쓸 수 있습니다. 여러 파일이나 폴더를 한꺼번에 넣어도 됩니다.</p>
             <button
               type="button"
               onClick={upload.openFilePicker}
