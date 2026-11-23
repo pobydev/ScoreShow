@@ -22,7 +22,7 @@
 
 최신 버전은 [GitHub Releases](https://github.com/pobydev/ScoreShow/releases/latest)에서 다운로드할 수 있습니다.
 
-- Windows: `ScoreShow-Setup-1.2.1.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.2.1/ScoreShow-Setup-1.2.1.exe))
+- Windows: `ScoreShow-Setup-1.3.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.3.0/ScoreShow-Setup-1.3.0.exe))
 
 ## 📖 사용 가이드
 
@@ -32,6 +32,7 @@
 
 - 📊 엑셀 파일(.xlsx, .xls) 업로드 및 자동 컬럼 매핑
 - 🗂️ 반별 저장 목록 - 이름을 정해 저장해 두고 골라서 열기
+- 📂 여러 파일이나 폴더를 한꺼번에 넣으면 파일마다 목록 하나씩 저장
 - 📥 표준 템플릿 다운로드/업로드 (나이스 다중 영역 인식 문제 대비)
 - 👥 학생 목록 검색 및 관리
 - 🎯 학생을 한 명씩 큰 글씨로 보여 주고, 사이에 대기 화면으로 점수를 가림
@@ -117,7 +118,7 @@ pnpm run electron:pack
 
 빌드된 파일은 `release` 폴더에 생성됩니다. 배포하는 설치 파일은 Windows용뿐입니다:
 
-- Windows: `ScoreShow-Setup-1.2.1.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.2.1/ScoreShow-Setup-1.2.1.exe))
+- Windows: `ScoreShow-Setup-1.3.0.exe` ([바로 다운로드](https://github.com/pobydev/ScoreShow/releases/download/v1.3.0/ScoreShow-Setup-1.3.0.exe))
 
 일반 사용자는 이 실행 파일을 다운로드하여 더블클릭으로 설치하고 사용할 수 있습니다.
 
