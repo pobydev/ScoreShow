@@ -17,7 +17,7 @@ export function StudentList() {
 
   const { above, below } = waitNeighbors(students, waitGap);
   const activeId = isBlackout ? (below ?? above)?.id ?? null : selectedStudentId;
-  const studentRefs = useScrollSelectedIntoView(activeId);
+  const { studentRefs, listRef } = useScrollSelectedIntoView(activeId, isBlackout);
 
   const filteredStudents = useMemo(
     () => filterStudents(students, searchQuery),
@@ -52,7 +52,7 @@ export function StudentList() {
         />
       </div>
       <div className="section-label flex-shrink-0 mt-1">STUDENTS</div>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto">
         {filteredStudents.length === 0 ? (
           <div className="p-4 text-center text-body text-soft">검색 결과가 없습니다.</div>
         ) : (
